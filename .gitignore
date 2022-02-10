@@ -1,3 +1,6 @@
 **/__pycache*
 env/*
 pyvenv.cfg
+
+# Monodepth2
+models/monodepth2/models
