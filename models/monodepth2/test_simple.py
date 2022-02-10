@@ -19,7 +19,6 @@ import torch
 from torchvision import transforms, datasets
 
 import networks
-from layers import disp_to_depth
 from utils import download_model_if_doesnt_exist
 
 
@@ -39,6 +38,18 @@ def parse_args():
                         help='image extension to search for in folder', default="jpg")
 
     return parser.parse_args()
+
+
+def disp_to_depth(disp, min_depth, max_depth):
+    """Convert network's sigmoid output into depth prediction
+    The formula for this conversion is given in the 'additional considerations'
+    section of the paper.
+    """
+    min_disp = 1 / max_depth
+    max_disp = 1 / min_depth
+    scaled_disp = min_disp + (max_disp - min_disp) * disp
+    depth = 1 / scaled_disp
+    return scaled_disp, depth
 
 
 def test_simple(args):
