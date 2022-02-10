@@ -18,26 +18,8 @@ import matplotlib.cm as cm
 import torch
 from torchvision import transforms, datasets
 
-import networks
-from utils import download_model_if_doesnt_exist
-
-
-def parse_args():
-    parser = argparse.ArgumentParser(
-        description='Simple testing funtion for Monodepthv2 models.')
-
-    parser.add_argument('--image_path', type=str,
-                        help='path to a test image or folder of images', required=True)
-    parser.add_argument('--model_name', type=str,
-                        help='name of a pretrained model to use',
-                        choices=[
-                            "mono_640x192",
-                            "mono_no_pt_640x192",
-                            "mono_1024x320"])
-    parser.add_argument('--ext', type=str,
-                        help='image extension to search for in folder', default="jpg")
-
-    return parser.parse_args()
+from . import networks
+from .utils import download_model_if_doesnt_exist
 
 
 def disp_to_depth(disp, min_depth, max_depth):
@@ -52,7 +34,7 @@ def disp_to_depth(disp, min_depth, max_depth):
     return scaled_disp, depth
 
 
-def test_simple(args):
+def get_depth_map(args):
     """Function to predict for a single image or folder of images
     """
     assert args.model_name is not None, \
@@ -149,8 +131,3 @@ def test_simple(args):
             print("   - {}".format(name_dest_npy))
 
     print('-> Done!')
-
-
-if __name__ == '__main__':
-    args = parse_args()
-    test_simple(args)
