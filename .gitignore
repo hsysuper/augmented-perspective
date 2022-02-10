@@ -1,1 +1,3 @@
 **/__pycache*
+env/*
+pyvenv.cfg
