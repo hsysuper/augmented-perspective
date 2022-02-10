@@ -19,9 +19,6 @@ def download_model_if_doesnt_exist(model_name):
         "mono_640x192":
             ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_640x192.zip",
              "a964b8356e08a02d009609d9e3928f7c"),
-        "mono_no_pt_640x192":
-            ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_no_pt_640x192.zip",
-             "9c2f071e35027c895a4728358ffc913a"),
         "mono_1024x320":
             ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_1024x320.zip",
              "0ab0766efdfeea89a0d9ea8ba90e1e63"),
