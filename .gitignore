@@ -4,3 +4,5 @@ pyvenv.cfg
 
 # Monodepth2
 models/monodepth2/models
+models/monodepth2/assets/*_disp.jpeg
+models/monodepth2/assets/*_disp.npy
