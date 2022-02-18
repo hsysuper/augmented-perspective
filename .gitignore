@@ -6,3 +6,5 @@ pyvenv.cfg
 models/monodepth2/models
 models/monodepth2/assets/*_disp.jpeg
 models/monodepth2/assets/*_disp.npy
+models/monodepth2/assets/test_image_*.npy
+models/monodepth2/assets/test_image_*.jpeg

@@ -100,22 +100,34 @@ def get_depth_map(args):
             input_image = transforms.ToTensor()(input_image).unsqueeze(0)
 
             # PREDICTION
+            print("input_image.shape: ", input_image.shape)
             input_image = input_image.to(device)
             features = encoder(input_image)
             outputs = depth_decoder(features)
 
             disp = outputs[("disp", 0)]
+            print("disp.shape: ", disp.shape)
             disp_resized = torch.nn.functional.interpolate(
                 disp, (original_height, original_width), mode="bilinear", align_corners=False)
+            print("disp_resized.shape: ", disp_resized.shape)
 
             # Saving numpy file
             output_name = os.path.splitext(os.path.basename(image_path))[0]
             scaled_disp, depth = disp_to_depth(disp, 0.1, 100)
+            print("scaled_disp.shape: ", scaled_disp.shape)
             name_dest_npy = os.path.join(output_directory, "{}_disp.npy".format(output_name))
             np.save(name_dest_npy, scaled_disp.cpu().numpy())
 
+            # Save file for calibration
+            name_resized_dest_npy = os.path.join(output_directory, "{}_resized_disp.npy".format(output_name))
+            np.save(name_resized_dest_npy, disp_resized.cpu().numpy())
+            resized_disp_scaled, depth_resized = disp_to_depth(disp_resized, 1, 10000)
+            name_resized_depth_npy = os.path.join(output_directory, "{}_resized_depth.npy".format(output_name))
+            np.save(name_resized_depth_npy, depth_resized.squeeze().cpu().numpy())
+
             # Saving colormapped depth image
             disp_resized_np = disp_resized.squeeze().cpu().numpy()
+            print("disp_resized_np.shape: ", disp_resized_np.shape)
             vmax = np.percentile(disp_resized_np, 95)
             normalizer = mpl.colors.Normalize(vmin=disp_resized_np.min(), vmax=vmax)
             mapper = cm.ScalarMappable(norm=normalizer, cmap='magma')

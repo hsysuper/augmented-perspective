@@ -61,4 +61,7 @@ if __name__ == '__main__':
     dms = [(cls(name, args), name) for cls, name in DEPTH_MODELS]
     for dm, name in dms:
         with change_path(f'./models/{name}'):
-            dm.get_depth_map()
+            depth_map = dm.get_depth_map()
+            if depth_map:
+                print(depth_map.shape)
+                print(depth_map)
