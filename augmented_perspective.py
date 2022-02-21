@@ -118,27 +118,28 @@ if __name__ == '__main__':
     M = calibrate(depth_map)
 
     a = math.pi * 0 / 180
-    RXT = np.array([
-        [1, 0, 0, 300],
-        [0, math.cos(a), -math.sin(a), 0],
-        [0, math.sin(a), math.cos(a), 0],
-        [0, 0, 0, 1]],
+    RX = np.array([
+        [1, 0, 0],
+        [0, math.cos(a), -math.sin(a)],
+        [0, math.sin(a), math.cos(a)]],
         dtype=np.float64)
     b = math.pi * 60 / 180
-    RYT = np.array([
-        [math.cos(b), 0, math.sin(b), 0],
-        [0, 1, 0, 0],
-        [-math.sin(b), 0, math.cos(b), 0],
-        [0, 0, 0, 1]],
+    RY = np.array([
+        [math.cos(b), 0, math.sin(b)],
+        [0, 1, 0],
+        [-math.sin(b), 0, math.cos(b)]],
         dtype=np.float64)
     g = math.pi * 0 / 180
-    RZT = np.array([
-        [math.cos(g), -math.sin(g), 0, 0],
-        [math.sin(g), math.cos(g), 0, 0],
-        [0, 0, 1, -300],
-        [0, 0, 0, 1]],
+    RZ = np.array([
+        [math.cos(g), -math.sin(g), 0],
+        [math.sin(g), math.cos(g), 0],
+        [0, 0, 1]],
         dtype=np.float64)
-    RT = RZT.dot(RYT.dot(RXT))
+    T = np.array([150, 0, -300, 1], dtype=np.float64)
+    R = RZ.dot(RY.dot(RX))
+    RT = np.zeros((4, 4), dtype=np.float64)
+    RT[0:3, 0:3] = R
+    RT[:, 3] = T
     print("RT\n", RT)
     greyscale_img = get_greyscale_img(image)
     greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
