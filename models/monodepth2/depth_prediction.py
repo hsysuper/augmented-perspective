@@ -121,7 +121,7 @@ def get_depth_map(args):
             # Save file for calibration
             name_resized_dest_npy = os.path.join(output_directory, "{}_resized_disp.npy".format(output_name))
             np.save(name_resized_dest_npy, disp_resized.cpu().numpy())
-            resized_disp_scaled, depth_resized = disp_to_depth(disp_resized, 1, 10000)
+            resized_disp_scaled, depth_resized = disp_to_depth(disp_resized, 1, 1000)
             name_resized_depth_npy = os.path.join(output_directory, "{}_resized_depth.npy".format(output_name))
             np.save(name_resized_depth_npy, depth_resized.squeeze().cpu().numpy())
 
