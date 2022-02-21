@@ -17,12 +17,12 @@ def calibrate(depth_map):
     """
     Return the camera matrix used to take the input image
 
-      -------------> u
+      -------------> u/x
       |\
       | \
       |  \
       |   \
-      |v   \ depth
+      |v/y \ depth (z)
 
     Assuming same axis in camera and real world axis, thus
     x = u, y = v, z = depth
