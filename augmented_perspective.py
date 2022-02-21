@@ -70,7 +70,7 @@ def reprojection_inv_method(image, depth_map, M, RT):
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
-    :param image: input RGB image (H, W)
+    :param image: input greyscale image (H, W)
     :param depth_map depth map
     :param M: camera matrix
     :param T: translation matrix (3, 4)
@@ -83,16 +83,25 @@ def reprojection(image, depth_map, M, RT):
     M_new = M.dot(RT)
     H, W = image.shape
     new_image = np.zeros((H, W), dtype=np.float64)
-    for h in range(H):
-        for w in range(W):
-            depth_3d_vector = np.array([h, w, depth_map[h, w], 1], dtype=np.float64)
+    for u in range(W):
+        for v in range(H):
+            depth_3d_vector = np.array([u, v, depth_map[v, u], 1], dtype=np.float64)
             # p_old = M.dot(depth_3d_vector)
             # p_old /= p_old[-1]
             p_new = M_new.dot(depth_3d_vector)
             p_new /= p_new[-1]
-            p_new[0] = min(max(0, p_new[0]), H - 1)
-            p_new[1] = min(max(0, p_new[1]), W - 1)
-            new_image[int(p_new[0]), int(p_new[1])] = image[h, w]
+            p_new[0] = min(max(0, p_new[0]), W - 1)
+            p_new[1] = min(max(0, p_new[1]), H - 1)
+
+            # Optionally doing reprojection again on old projection matrix
+            # p_old = M.dot(depth_3d_vector)
+            # p_old /= p_old[-1]
+            # p_old[0] = min(max(0, p_old[0]), W - 1)
+            # p_old[1] = min(max(0, p_old[1]), H - 1)
+
+            # X-Y is reversed in row-first matrices
+            # new_image[int(p_new[1]), int(p_new[0])] = image[int(p_old[1]), int(p_old[0])]
+            new_image[int(p_new[1]), int(p_new[0])] = image[v, u]
     return new_image.astype(np.uint8)
 
 
@@ -108,17 +117,17 @@ if __name__ == '__main__':
     depth_map = np.load(depth_map_path)
     M = calibrate(depth_map)
 
-    a = math.pi * 30 / 180
+    a = math.pi * 0 / 180
     RXT = np.array([
-        [1, 0, 0, 0],
+        [1, 0, 0, 300],
         [0, math.cos(a), -math.sin(a), 0],
         [0, math.sin(a), math.cos(a), 0],
         [0, 0, 0, 1]],
         dtype=np.float64)
-    b = math.pi * 0 / 180
+    b = math.pi * 60 / 180
     RYT = np.array([
         [math.cos(b), 0, math.sin(b), 0],
-        [0, 1, 0, 50],
+        [0, 1, 0, 0],
         [-math.sin(b), 0, math.cos(b), 0],
         [0, 0, 0, 1]],
         dtype=np.float64)
@@ -126,10 +135,10 @@ if __name__ == '__main__':
     RZT = np.array([
         [math.cos(g), -math.sin(g), 0, 0],
         [math.sin(g), math.cos(g), 0, 0],
-        [0, 0, 1, 200],
+        [0, 0, 1, -300],
         [0, 0, 0, 1]],
         dtype=np.float64)
-    RT = RXT.dot(RYT.dot(RZT))
+    RT = RZT.dot(RYT.dot(RXT))
     print("RT\n", RT)
     greyscale_img = get_greyscale_img(image)
     greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
