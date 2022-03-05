@@ -14,6 +14,7 @@ From the augmented-perspective directory...
 class DepthModel:
     def __init__(self, name: str, args):
         self.name = name
+        vars(args)['image_path'] = '../../' + args.image_path
         self.args = args
 
 
