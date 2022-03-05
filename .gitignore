@@ -2,9 +2,11 @@
 env/*
 pyvenv.cfg
 
+# Assets
+assets/*_disp.jpeg
+assets/*_disp.npy
+assets/test_image_*.jpeg
+assets/test_image_*.npy
+
 # Monodepth2
 models/monodepth2/models
-models/monodepth2/assets/*_disp.jpeg
-models/monodepth2/assets/*_disp.npy
-models/monodepth2/assets/test_image_*.npy
-models/monodepth2/assets/test_image_*.jpeg
