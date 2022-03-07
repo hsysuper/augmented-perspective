@@ -10,12 +10,24 @@ from models.boosting import get_depth_map as get_boosting_depth_map
 """
 USAGE:
 From the augmented-perspective directory...
+
+1) CHOOSE THE IMAGES TO WORK ON
+
     DEFAULT (all images in 'assets/'):
         python -m depth_model
     ENTIRE DIR:
         python -m depth_model --image_path assets/
     SINGLE FILE:
         python -m depth_model --image_path assets/test_image.jpg
+
+2) CHOOSE THE MODELS TO TEST
+
+    DEFAULT (all models):
+        python -m depth_model
+    MONODEPTH2 ONLY:
+        python -m depth_model --monodepth2
+    BOOSTING ONLY:
+        python -m depth_model --boosting
 """
 
 class DepthModel:
@@ -66,19 +78,30 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Depth model initialization.')
     parser.add_argument('--image_path', type=str, default='assets/',
                         help='path to a test image or folder of images')
+    parser.add_argument('--monodepth2', action='store_true', default=False)
+    parser.add_argument('--boosting', action='store_true', default=False)
     return parser.parse_args()
 
 
 DEPTH_MODELS = [
     (MonodepthDM, 'monodepth2'),
-    # (BoostingDM, 'boosting'),
+    (BoostingDM, 'boosting'),
     # Add more models here...
 ]
 
 
 if __name__ == '__main__':
     args = parse_args()
-    dms = [(cls(name, args), name) for cls, name in DEPTH_MODELS]
-    for dm, name in dms:
+
+    # Run all of the models by default if none are specified.
+    if not args.monodepth2 and not args.boosting:
+        vars(args)['monodepth2'] = True
+        vars(args)['boosting'] = True
+
+    for cls, name in DEPTH_MODELS:
+        if not vars(args)[name]: continue
+
+        args_cp = argparse.Namespace(**vars(args))
+        dm = cls(name, args_cp)
         with change_path(f'./models/{name}'):
             dm.get_depth_map()
