@@ -75,13 +75,13 @@ def get_depth_map(args):
     if os.path.isfile(args.image_path):
         # Only testing on a single image
         paths = [args.image_path]
-        output_directory = os.path.dirname(args.image_path)
     elif os.path.isdir(args.image_path):
         # Searching folder for images
-        paths = glob.glob(os.path.join(args.image_path, '*.{}'.format(args.ext)))
-        output_directory = args.image_path
+        paths = glob.glob(os.path.join(args.image_path, '*'))
     else:
         raise Exception("Can not find args.image_path: {}".format(args.image_path))
+
+    output_directory = args.output_path
 
     print("-> Predicting on {:d} test images".format(len(paths)))
 
@@ -112,7 +112,7 @@ def get_depth_map(args):
             print("disp_resized.shape: ", disp_resized.shape)
 
             # Saving numpy file
-            output_name = os.path.splitext(os.path.basename(image_path))[0]
+            output_name = os.path.splitext(os.path.basename(image_path))[0] + "_monodepth2"
             scaled_disp, depth = disp_to_depth(disp, 0.1, 100)
             print("scaled_disp.shape: ", scaled_disp.shape)
             name_dest_npy = os.path.join(output_directory, "{}_disp.npy".format(output_name))
