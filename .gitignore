@@ -1,9 +1,11 @@
 **/__pycache*
 env/*
 pyvenv.cfg
+**/.DS_Store
 
 # Outputs
 outputs/*
+output_images/*
 
 # Monodepth2
 models/monodepth2/models
