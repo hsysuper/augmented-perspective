@@ -34,7 +34,7 @@ GPU_threshold = 1600 - 32 # Limit for the GPU (NVIDIA RTX 2080), can be adjusted
 
 # MAIN PART OF OUR METHOD
 def get_depth_map(option):
-    dataset = ImageDataset(option.data_dir)
+    dataset = ImageDataset(option.image_path)
 
     # Load merge network
     opt = TestOptions().parse()
@@ -138,7 +138,7 @@ def get_depth_map(option):
         mergein_scale = input_resolution[0] / img.shape[0]
         print('Dynamicly change merged-in resolution; scale:', mergein_scale)
 
-        imageandpatchs = ImageandPatchs(option.data_dir, images.name, patchset, img, mergein_scale)
+        imageandpatchs = ImageandPatchs(option.image_path, images.name, patchset, img, mergein_scale)
         whole_estimate_resized = cv2.resize(whole_estimate, (round(img.shape[1]*mergein_scale),
                                             round(img.shape[0]*mergein_scale)), interpolation=cv2.INTER_CUBIC)
         imageandpatchs.set_base_estimate(whole_estimate_resized.copy())
