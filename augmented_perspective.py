@@ -67,43 +67,6 @@ def reprojection_inv_method(image, depth_map, M, RT):
     return new_image.astype(np.uint8)
 
 
-def reprojection2(image, depth_map, M, RT):
-    """
-    Reproject using a translation matrix
-    :param image: input greyscale image (H, W)
-    :param depth_map depth map
-    :param M: camera matrix
-    :param RT: translation matrix (3, 4)
-    :return: reprojected image
-    """
-    print("Start reprojection")
-    print("image.shape", image.shape)
-    print("M.shape", M.shape)
-    print("RT.shape", RT.shape)
-    M_square = np.zeros((4, 4), dtype=np.float64)
-    M_square[:3, :] = M
-    M_square[3, 3] = 1
-    M_inv = np.linalg.inv(M_square)
-    M_new = M.dot(RT)
-    print("M_new", M_new)
-    H, W = image.shape
-    new_image = np.zeros((H, W), dtype=np.float64)
-    for u in range(W):
-        for v in range(H):
-            z = depth_map[v, u]
-            img_h = np.array([u, v, 1, 1.0 / z], dtype=np.float64)
-            world_p_h = z * M_inv.dot(img_h.T)
-            world_p_h /= world_p_h[-1]
-            p_new = M_new.dot(world_p_h)
-            p_new /= p_new[-1]
-            p_new[0] = min(max(0, p_new[0]), W - 1)
-            p_new[1] = min(max(0, p_new[1]), H - 1)
-
-            # X-Y is reversed in row-first matrices
-            new_image[int(p_new[1]), int(p_new[0])] = image[v, u]
-    return new_image.astype(np.uint8)
-
-
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
@@ -114,32 +77,39 @@ def reprojection(image, depth_map, M, RT):
     :return: reprojected image
     """
     print("Start reprojection")
-    print("image.shape", image.shape)
-    print("M.shape", M.shape)
-    print("RT.shape", RT.shape)
+    M_square = np.zeros((4, 4), dtype=np.float64)
+    M_square[:3, :] = M
+    M_square[3, 3] = 1
+    M_inv = np.linalg.inv(M_square)
     M_new = M.dot(RT)
-    print("M_new\n", M_new)
     H, W = image.shape
     new_image = np.zeros((H, W), dtype=np.float64)
+
+    px_to_depth_and_color = {}
     for u in range(W):
         for v in range(H):
-            depth_3d_vector = np.array([u, v, depth_map[v, u], 1], dtype=np.float64)
-            # p_old = M.dot(depth_3d_vector)
-            # p_old /= p_old[-1]
-            p_new = M_new.dot(depth_3d_vector)
+            z = depth_map[v, u]
+            img_h = np.array([u, v, 1, 1.0 / z], dtype=np.float64)
+            world_p_h = z * M_inv.dot(img_h.T)
+            world_p_h /= world_p_h[-1]
+            p_new = M_new.dot(world_p_h)
             p_new /= p_new[-1]
-            p_new[0] = min(max(0, p_new[0]), W - 1)
-            p_new[1] = min(max(0, p_new[1]), H - 1)
-
-            # Optionally doing reprojection again on old projection matrix
-            # p_old = M.dot(depth_3d_vector)
-            # p_old /= p_old[-1]
-            # p_old[0] = min(max(0, p_old[0]), W - 1)
-            # p_old[1] = min(max(0, p_old[1]), H - 1)
+            x_new = int(p_new[0])
+            y_new = int(p_new[1])
+            # Only allow in-frame pixels
+            if x_new < 0 or x_new >= W or y_new < 0 or y_new >= H:
+                continue
 
             # X-Y is reversed in row-first matrices
-            # new_image[int(p_new[1]), int(p_new[0])] = image[int(p_old[1]), int(p_old[0])]
-            new_image[int(p_new[1]), int(p_new[0])] = image[v, u]
+            # There may be multiple pixels in the 3D world that map to the same
+            # new 2D pixel. We should save the one with the least depth as that
+            # is what the camera would see. Everything else is occluded.
+            if (y_new, x_new) not in px_to_depth_and_color or z < px_to_depth_and_color[(y_new, x_new)]["depth"]:
+                px_to_depth_and_color[(y_new, x_new)] = {"depth": z, "color": image[v,u]}
+
+    for k, v in px_to_depth_and_color.items():
+        new_image[k[0], k[1]] = v["color"]
+
     return new_image.astype(np.uint8)
 
 
@@ -149,42 +119,46 @@ if __name__ == '__main__':
     depth_map_path = args.depth_map_path
 
     output_name = pathlib.Path(image_path).stem
-    output_directory = pathlib.Path(image_path).parent
+    output_directory = pathlib.Path(depth_map_path).parent
+    reprojection_output_directory = pathlib.Path("output_images")
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
-    M = calibrate(depth_map)
+    # M = calibrate(depth_map)
+    # M = np.array([
+    #     [7.070493e+02, 0.000000e+00, 6.040814e+02, 4.575831e+01],
+    #     [0.000000e+00, 7.070493e+02, 1.805066e+02, -3.454157e-01],
+    #     [0.000000e+00, 0.000000e+00, 1.000000e+00, 4.981016e-03],
+    # ])
+    M = np.array([
+        [7.070493e+02, 0.000000e+00, 6.040814e+02, 0],
+        [0.000000e+00, 7.070493e+02, 1.805066e+02, 0],
+        [0.000000e+00, 0.000000e+00, 1.000000e+00, 0],
+    ])
 
+    # ROTATIONS
     a = math.pi * 0 / 180
-    RX = np.array([
-        [1, 0, 0],
-        [0, math.cos(a), -math.sin(a)],
-        [0, math.sin(a), math.cos(a)]],
-        dtype=np.float64)
-    b = math.pi * 60 / 180
-    RY = np.array([
-        [math.cos(b), 0, math.sin(b)],
-        [0, 1, 0],
-        [-math.sin(b), 0, math.cos(b)]],
-        dtype=np.float64)
+    b = math.pi * 15 / 180
     g = math.pi * 0 / 180
-    RZ = np.array([
-        [math.cos(g), -math.sin(g), 0],
-        [math.sin(g), math.cos(g), 0],
-        [0, 0, 1]],
-        dtype=np.float64)
-    T = np.array([0, 0, 0, 1], dtype=np.float64)
+    RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]], dtype=np.float64)
+    RY = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]], dtype=np.float64)
+    RZ = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]], dtype=np.float64)
     R = RZ.dot(RY.dot(RX))
+
+    # TRANSLATIONS
+    T = np.array([-0.3, 0, 0, 1], dtype=np.float64)
+
     RT = np.zeros((4, 4), dtype=np.float64)
     RT[0:3, 0:3] = R
     RT[:, 3] = T
     print("RT\n", RT)
+
     greyscale_img = get_greyscale_img(image)
     greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
     io.imsave(greyscale_img_path, greyscale_img.astype(np.uint8))
 
-    new_image = reprojection2(greyscale_img, depth_map, M, RT)
+    new_image = reprojection(greyscale_img, depth_map, M, RT)
 
-    reprojected_image_path = os.path.join(output_directory, "{}_reprojected.jpeg".format(output_name))
+    reprojected_image_path = os.path.join(reprojection_output_directory, "{}_reprojected.jpeg".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
