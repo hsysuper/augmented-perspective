@@ -2,7 +2,6 @@ import argparse
 import os
 import torch
 from .. import models, utils
-# import pix2pix.data
 import numpy as np
 
 class BaseOptions():
@@ -19,9 +18,8 @@ class BaseOptions():
     def initialize(self, parser):
         """Define the common options that are used in both training and test."""
         # basic parameters
-        parser.add_argument('--dataroot', help='path to images (should have subfolders trainA, trainB, valA, valB, etc)')
         parser.add_argument('--name', type=str, default='void', help='mahdi_unet_new, scaled_unet')
-        parser.add_argument('--gpu_ids', type=str, default='0', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        parser.add_argument('--gpu_ids', type=str, default='-1', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
         parser.add_argument('--checkpoints_dir', type=str, default='./pix2pix/checkpoints', help='models are saved here')
         # model parameters
         parser.add_argument('--model', type=str, default='cycle_gan', help='chooses which model to use. [cycle_gan | pix2pix | test | colorization]')
@@ -75,11 +73,6 @@ class BaseOptions():
         parser = model_option_setter(parser, self.isTrain)
         opt, _ = parser.parse_known_args()  # parse again with new defaults
 
-        # # modify dataset-related parser options
-        # dataset_name = opt.dataset_mode
-        # dataset_option_setter = pix2pix.data.get_option_setter(dataset_name)
-        # parser = dataset_option_setter(parser, self.isTrain)
-        #
         # save and return the parser
         self.parser = parser
         return parser.parse_args()
@@ -100,14 +93,6 @@ class BaseOptions():
             message += '{:>25}: {:<30}{}\n'.format(str(k), str(v), comment)
         message += '----------------- End -------------------'
         print(message)
-
-        # save to the disk
-        expr_dir = os.path.join(opt.checkpoints_dir, opt.name)
-        utils.mkdirs(expr_dir)
-        file_name = os.path.join(expr_dir, '{}_opt.txt'.format(opt.phase))
-        with open(file_name, 'wt') as opt_file:
-            opt_file.write(message)
-            opt_file.write('\n')
 
     def parse(self):
         """Parse our options, create checkpoints directory suffix, and set up gpu device."""
