@@ -97,7 +97,7 @@ def get_depth_map(option):
         # Check if Local boosting is beneficial.
         if option.max_res < whole_image_optimal_size:
             print("No Local boosting. Specified Max Res is smaller than R20")
-            path = os.path.join(result_dir, f"{images.name}_boosting_disp.png")
+            path = os.path.join(result_dir, f"{images.name}_boosting_disp")
             midas_utils.write_depth(path,
                                     cv2.resize(whole_estimate,
                                                (input_resolution[1], input_resolution[0]),
