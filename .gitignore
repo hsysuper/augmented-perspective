@@ -2,11 +2,12 @@
 env/*
 pyvenv.cfg
 
-# Assets
-assets/*_disp.jpeg
-assets/*_disp.npy
-assets/test_image_*.jpeg
-assets/test_image_*.npy
+# Outputs
+outputs/*
 
 # Monodepth2
 models/monodepth2/models
+
+# Boosting
+models/boosting/midas/model.pt
+models/boosting/pix2pix/checkpoints
