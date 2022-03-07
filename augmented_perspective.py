@@ -67,13 +67,50 @@ def reprojection_inv_method(image, depth_map, M, RT):
     return new_image.astype(np.uint8)
 
 
+def reprojection2(image, depth_map, M, RT):
+    """
+    Reproject using a translation matrix
+    :param image: input greyscale image (H, W)
+    :param depth_map depth map
+    :param M: camera matrix
+    :param RT: translation matrix (3, 4)
+    :return: reprojected image
+    """
+    print("Start reprojection")
+    print("image.shape", image.shape)
+    print("M.shape", M.shape)
+    print("RT.shape", RT.shape)
+    M_square = np.zeros((4, 4), dtype=np.float64)
+    M_square[:3, :] = M
+    M_square[3, 3] = 1
+    M_inv = np.linalg.inv(M_square)
+    M_new = M.dot(RT)
+    print("M_new", M_new)
+    H, W = image.shape
+    new_image = np.zeros((H, W), dtype=np.float64)
+    for u in range(W):
+        for v in range(H):
+            z = depth_map[v, u]
+            img_h = np.array([u, v, 1, 1.0 / z], dtype=np.float64)
+            world_p_h = z * M_inv.dot(img_h.T)
+            world_p_h /= world_p_h[-1]
+            p_new = M_new.dot(world_p_h)
+            p_new /= p_new[-1]
+            p_new[0] = min(max(0, p_new[0]), W - 1)
+            p_new[1] = min(max(0, p_new[1]), H - 1)
+
+            # X-Y is reversed in row-first matrices
+            new_image[int(p_new[1]), int(p_new[0])] = image[v, u]
+    return new_image.astype(np.uint8)
+
+
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
     :param image: input greyscale image (H, W)
     :param depth_map depth map
     :param M: camera matrix
-    :param T: translation matrix (3, 4)
+    :param RT: translation matrix (3, 4)
     :return: reprojected image
     """
     print("Start reprojection")
@@ -81,6 +118,7 @@ def reprojection(image, depth_map, M, RT):
     print("M.shape", M.shape)
     print("RT.shape", RT.shape)
     M_new = M.dot(RT)
+    print("M_new\n", M_new)
     H, W = image.shape
     new_image = np.zeros((H, W), dtype=np.float64)
     for u in range(W):
@@ -135,7 +173,7 @@ if __name__ == '__main__':
         [math.sin(g), math.cos(g), 0],
         [0, 0, 1]],
         dtype=np.float64)
-    T = np.array([150, 0, -300, 1], dtype=np.float64)
+    T = np.array([0, 0, 0, 1], dtype=np.float64)
     R = RZ.dot(RY.dot(RX))
     RT = np.zeros((4, 4), dtype=np.float64)
     RT[0:3, 0:3] = R
@@ -145,7 +183,7 @@ if __name__ == '__main__':
     greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
     io.imsave(greyscale_img_path, greyscale_img.astype(np.uint8))
 
-    new_image = reprojection(greyscale_img, depth_map, M, RT)
+    new_image = reprojection2(greyscale_img, depth_map, M, RT)
 
     reprojected_image_path = os.path.join(output_directory, "{}_reprojected.jpeg".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
