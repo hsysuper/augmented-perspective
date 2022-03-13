@@ -106,6 +106,9 @@ def fill(image):
 
 
 def run_augmented_perspective(argv):
+    print("before", sys.argv)
+    sys.argv = argv
+    print("after", sys.argv)
     args = parse_args()
     image_path = args.image_path
     depth_map_path = args.depth_map_path
