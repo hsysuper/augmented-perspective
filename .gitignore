@@ -3,6 +3,9 @@ env/*
 pyvenv.cfg
 **/.DS_Store
 
+# Old assets
+assets/car.jpg
+
 # Outputs
 outputs/*
 output_images/*
