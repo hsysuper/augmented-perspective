@@ -2,6 +2,7 @@ from skimage import io
 import numpy as np
 import argparse
 import json
+import depth_model
 
 class Dataset:
 
@@ -19,7 +20,7 @@ class Dataset:
        for i in data['frames']:
            transformations.append(i)
        file.close()
-       
+
        return len(transformations)
 
    def get_image(self, image1, image2):
@@ -53,9 +54,13 @@ def parse_args():
     argv = ["chair","train", '50', '63']
     return parser.parse_args(argv[:])
 
+
+
 if __name__ == '__main__':
     args = parse_args()
     dataset = Dataset(args.dataset_name, args.dataset_type)
 
-    # num_images = dataset.get_number_of_images()
-    # image1,image2,T = dataset.get_image(args.image1_index, args.image2_index)
+    num_images = dataset.get_number_of_images()
+    image1,image2,T = dataset.get_image(args.image1_index, args.image2_index)
+
+    

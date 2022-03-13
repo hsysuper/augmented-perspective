@@ -1,11 +1,16 @@
 import argparse
 import contextlib
+import importlib
 import os
 import pathlib
+import sys
+
 import numpy as np
 
-from models.monodepth2 import get_depth_map as get_monodepth_depth_map
-from models.boosting import get_depth_map as get_boosting_depth_map
+from models import monodepth2
+from models import boosting
+importlib.reload(monodepth2)
+importlib.reload(boosting)
 
 
 """
@@ -54,7 +59,7 @@ class MonodepthDM(DepthModel):
 
     def get_depth_map(self):
         print(self.args)
-        return get_monodepth_depth_map(self.args, self.parser)
+        return monodepth2.get_depth_map(self.args, self.parser)
 
 
 class BoostingDM(DepthModel):
@@ -67,7 +72,7 @@ class BoostingDM(DepthModel):
         super().__init__(name, args, parser)
 
     def get_depth_map(self):
-        return get_boosting_depth_map(self.args, self.parser)
+        return boosting.get_depth_map(self.args, self.parser)
 
 """
 Context manager to easily set working directory when running
@@ -91,6 +96,7 @@ def get_parser():
     parser.add_argument('--monodepth2', action='store_true', default=False)
     parser.add_argument('--boosting', action='store_true', default=False)
     parser.add_argument('--output_path', type=str, default='outputs/')
+    parser.add_argument('--device', type=str, default='cpu')
     return parser
 
 
@@ -101,7 +107,10 @@ DEPTH_MODELS = [
 ]
 
 
-def main():
+def run_depth_model(argv):
+    print("before", sys.argv)
+    sys.argv = argv
+    print("after", sys.argv)
     parser = get_parser()
     args = parser.parse_args()
     os.makedirs(args.output_path, exist_ok=True)
@@ -123,4 +132,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    run_depth_model(sys.argv)
