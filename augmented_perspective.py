@@ -109,9 +109,9 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLE=15, TRANSLATION=-0.3, FRAMES=0,
         output_directory="output_images",
 ):
-    print("before", sys.argv)
+    # print("before", sys.argv)
     sys.argv = argv
-    print("after", sys.argv)
+    # print("after", sys.argv)
     args = parse_args()
     image_path = args.image_path
     depth_map_path = args.depth_map_path
@@ -144,7 +144,7 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLES = np.linspace(0, ANGLE, FRAMES)
         TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
 
-    for i in range(FRAMES):
+    for i in range(len(ANGLES)):
 
         # ROTATIONS
         a = math.pi * 0 / 180
@@ -166,8 +166,9 @@ def run_augmented_perspective(argv, save_filled_only=False,
         new_image = reprojection(image, depth_map, M, RT)
         filled_new_image = fill(new_image)
 
-        reprojected_image_path = os.path.join(output_directory, f"{output_name}_reprojected_{i}.png")
-        reprojected_filled_image_path = os.path.join(output_directory, f"{output_name}_filled_{i}.png")
+        suffix = "" if not FRAMES else f"_{i}"
+        reprojected_image_path = os.path.join(output_directory, f"{output_name}_reprojected{suffix}.png")
+        reprojected_filled_image_path = os.path.join(output_directory, f"{output_name}_filled{suffix}.png")
         print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
         if not save_filled_only:
             io.imsave(reprojected_image_path, new_image)
