@@ -1,9 +1,12 @@
 import argparse
 import os
-import numpy as np
 import math
-from skimage import io
 import pathlib
+import sys
+
+import numpy as np
+from skimage import io
+
 from calibration import calibrate
 
 
@@ -94,8 +97,8 @@ def reprojection(image, depth_map, M, RT):
             world_p_h /= world_p_h[-1]
             p_new = M_new.dot(world_p_h)
             p_new /= p_new[-1]
-            x_new = int(p_new[0])
-            y_new = int(p_new[1])
+            x_new = round(p_new[0])
+            y_new = round(p_new[1])
             # Only allow in-frame pixels
             if x_new < 0 or x_new >= W or y_new < 0 or y_new >= H:
                 continue
@@ -113,7 +116,7 @@ def reprojection(image, depth_map, M, RT):
     return new_image.astype(np.uint8)
 
 
-if __name__ == '__main__':
+def run_augmented_perspective(argv):
     args = parse_args()
     image_path = args.image_path
     depth_map_path = args.depth_map_path
@@ -121,9 +124,12 @@ if __name__ == '__main__':
     output_name = pathlib.Path(depth_map_path).stem
     output_directory = pathlib.Path("outputs")
     final_output_directory = pathlib.Path("output_images")
+    os.makedirs(final_output_directory, exist_ok=True)
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
+    print("image size", image.shape)
+    print("depth map size", depth_map.shape)
 
     M_map = {
         "kitti1.png": "09_26",
@@ -158,11 +164,15 @@ if __name__ == '__main__':
     print("RT\n", RT)
 
     greyscale_img = get_greyscale_img(image)
-    greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
+    greyscale_img_path = os.path.join(output_directory, "{}_greyscale.png".format(output_name))
     io.imsave(greyscale_img_path, greyscale_img.astype(np.uint8))
 
     new_image = reprojection(greyscale_img, depth_map, M, RT)
 
-    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.jpeg".format(output_name))
+    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.png".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
+
+
+if __name__ == '__main__':
+    run_augmented_perspective(sys.argv)
