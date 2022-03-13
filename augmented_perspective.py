@@ -118,9 +118,8 @@ if __name__ == '__main__':
     image_path = args.image_path
     depth_map_path = args.depth_map_path
 
-    output_name = pathlib.Path(image_path).stem
-    output_directory = pathlib.Path(depth_map_path).parent
-    reprojection_output_directory = pathlib.Path("output_images")
+    output_name = pathlib.Path(depth_map_path).stem
+    output_directory = pathlib.Path("outputs")
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
@@ -159,6 +158,6 @@ if __name__ == '__main__':
 
     new_image = reprojection(greyscale_img, depth_map, M, RT)
 
-    reprojected_image_path = os.path.join(reprojection_output_directory, "{}_reprojected.jpeg".format(output_name))
+    reprojected_image_path = os.path.join(output_directory, "{}_reprojected.jpeg".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
