@@ -24,6 +24,7 @@ def write_depth(path, depth, bits=1 , colored=False):
     else:
         out = 0
 
+    print("Saving depth image {} to {}".format(depth.shape, path + '.png'))
     if bits == 1 or colored:
         out = out.astype("uint8")
         if colored:
@@ -31,5 +32,8 @@ def write_depth(path, depth, bits=1 , colored=False):
         cv2.imwrite(path+'.png', out)
     elif bits == 2:
         cv2.imwrite(path+'.png', out.astype("uint16"))
+
+    print("Saving depth data {} to {}".format(depth.shape, path+'.npy'))
+    np.save(path+'.npy', depth)
 
     return

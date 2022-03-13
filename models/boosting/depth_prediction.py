@@ -23,7 +23,6 @@ warnings.simplefilter('ignore', np.RankWarning)
 
 # select device
 device = torch.device("cpu")
-print("device: %s" % device)
 
 # Global variables
 pix2pixmodel = None
@@ -32,12 +31,17 @@ factor = None
 whole_size_threshold = 3000  # R_max from the paper
 GPU_threshold = 1600 - 32 # Limit for the GPU (NVIDIA RTX 2080), can be adjusted
 
-# MAIN PART OF OUR METHOD
-def get_depth_map(option):
-    dataset = ImageDataset(option.image_path)
 
+# MAIN PART OF OUR METHOD
+def get_depth_map(option, parser):
+    print("Reading images from {}".format(option.image_path))
+    dataset = ImageDataset(option.image_path, option.image_files)
+
+    print("device: %s" % device)
     # Load merge network
-    opt = TestOptions().parse()
+    options_parser = TestOptions()
+    options_parser.initialize(parser)
+    opt = options_parser.parse()
     global pix2pixmodel
     pix2pixmodel = Pix2Pix4DepthModel(opt)
     pix2pixmodel.save_dir = './pix2pix/checkpoints/mergemodel'
@@ -212,11 +216,11 @@ def get_depth_map(option):
             imageandpatchs.set_updated_estimate(tobemergedto)
 
         # Output the result
-        path = os.path.join(result_dir, f"{images.name}_boosting_disp.png")
-        midas_utils.write_depth(path,
-                                cv2.resize(imageandpatchs.estimation_updated_image,
-                                           (input_resolution[1], input_resolution[0]),
-                                           interpolation=cv2.INTER_CUBIC), bits=2, colored=True)
+        path = os.path.join(result_dir, f"{images.name}_boosting_disp")
+        midas_utils.write_depth(path, cv2.resize(imageandpatchs.estimation_updated_image,
+                                                 (input_resolution[1], input_resolution[0]),
+                                                 interpolation=cv2.INTER_CUBIC),
+                                bits=2, colored=True)
 
     print("finished")
 

@@ -196,10 +196,13 @@ class ImageandPatchs:
 
 
 class ImageDataset:
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, files=None):
         self.dataset_dir = root_dir
         self.rgb_image_dir = root_dir
-        self.files = sorted(os.listdir(self.rgb_image_dir))
+        if not files:
+            self.files = sorted(os.listdir(self.rgb_image_dir))
+        else:
+            self.files = files
 
     def __len__(self):
         return len(self.files)

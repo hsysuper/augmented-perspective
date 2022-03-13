@@ -52,6 +52,7 @@ class BaseOptions():
         parser.add_argument('--max_res', type=float, default=np.inf)
 
         self.initialized = True
+        self.parser = parser
         return parser
 
     def gather_options(self):
@@ -62,19 +63,18 @@ class BaseOptions():
         """
         if not self.initialized:  # check if it has been initialized
             parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-            parser = self.initialize(parser)
+            self.parser = self.initialize(parser)
 
         # get the basic options
-        opt, _ = parser.parse_known_args()
+        opt, _ = self.parser.parse_known_args()
 
         # modify model-related parser options
         model_name = opt.model
         model_option_setter = models.get_option_setter(model_name)
-        parser = model_option_setter(parser, self.isTrain)
+        parser = model_option_setter(self.parser, self.isTrain)
         opt, _ = parser.parse_known_args()  # parse again with new defaults
 
         # save and return the parser
-        self.parser = parser
         return parser.parse_args()
 
     def print_options(self, opt):

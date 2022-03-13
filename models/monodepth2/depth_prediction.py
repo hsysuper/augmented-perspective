@@ -7,9 +7,7 @@
 from __future__ import absolute_import, division, print_function
 
 import os
-import sys
 import glob
-import argparse
 import numpy as np
 import PIL.Image as pil
 import matplotlib as mpl
@@ -34,7 +32,7 @@ def disp_to_depth(disp, min_depth, max_depth):
     return scaled_disp, depth
 
 
-def get_depth_map(args):
+def get_depth_map(args, parser):
     """Function to predict for a single image or folder of images
     """
     assert args.model_name is not None, \
@@ -72,9 +70,12 @@ def get_depth_map(args):
     depth_decoder.eval()
 
     # FINDING INPUT IMAGES
-    if os.path.isfile(args.image_path):
+    print("Reading images from {}".format(args.image_path))
+    if args.image_files is not None:
         # Only testing on a single image
-        paths = [args.image_path]
+        paths = []
+        for image_file in args.image_files:
+            paths.append(os.path.join(args.image_path, image_file))
     elif os.path.isdir(args.image_path):
         # Searching folder for images
         paths = glob.glob(os.path.join(args.image_path, '*'))
