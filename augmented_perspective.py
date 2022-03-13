@@ -21,52 +21,6 @@ def parse_args():
     return parser.parse_args()
 
 
-def get_greyscale_img(img):
-    """
-    Get greyscale copy of this image
-    :param img: (H, W, 3)
-    :return: img: (H, W)
-    """
-    greyscale = np.array([0.299, 0.587, 0.114])
-    img = img.astype(np.double)
-    img = img.dot(greyscale)
-    return img
-
-
-def reprojection_inv_method(image, depth_map, M, RT):
-    """
-    Reproject using a translation matrix
-    :param image: input RGB image (H, W)
-    :param M: camera matrix
-    :param T: translation matrix (3, 4)
-    :return: reprojected image
-    """
-    print("Start reprojection")
-    print("image.shape", image.shape)
-    print("M.shape", M.shape)
-    print("RT.shape", RT.shape)
-    K_old = M[0:3, 0:3]
-    K_inv = np.linalg.inv(K_old)
-    RT_combined = np.zeros((3, 4), dtype=np.float64)
-    RT_combined[0:3, 0:3] = RT[0:3, 0:3]
-    RT_combined[:, 3] = M[:, 3]
-    M_new = K_old.dot(RT_combined)
-    H, W = image.shape
-    new_image = np.zeros((H, W), dtype=np.float64)
-    for h in range(H):
-        for w in range(W):
-            vector = np.array([h, w, 1], dtype=np.float64)
-            vector -= M[:, 3]
-            pseudo_3d = K_inv.dot(vector)
-            pseudo_3d_vector = np.array([pseudo_3d[0], pseudo_3d[1], pseudo_3d[2], 1], dtype=np.float64)
-            new_vector = M_new.dot(pseudo_3d_vector)
-            new_vector /= new_vector[-1]
-            new_vector[0] = min(max(H, new_vector[0]), 0)
-            new_vector[1] = min(max(W, new_vector[1]), 0)
-            new_image[int(new_vector[0]), int(new_vector[1])] = image[h, w]
-    return new_image.astype(np.uint8)
-
-
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
@@ -82,8 +36,8 @@ def reprojection(image, depth_map, M, RT):
     M_square[3, 3] = 1
     M_inv = np.linalg.inv(M_square)
     M_new = M.dot(RT)
-    H, W = image.shape
-    new_image = np.zeros((H, W), dtype=np.float64)
+    H, W, C = image.shape
+    new_image = np.zeros((H, W, C), dtype=np.float64)
 
     px_to_depth_and_color = {}
     for u in range(W):
@@ -94,8 +48,8 @@ def reprojection(image, depth_map, M, RT):
             world_p_h /= world_p_h[-1]
             p_new = M_new.dot(world_p_h)
             p_new /= p_new[-1]
-            x_new = int(p_new[0])
-            y_new = int(p_new[1])
+            x_new = round(p_new[0])
+            y_new = round(p_new[1])
             # Only allow in-frame pixels
             if x_new < 0 or x_new >= W or y_new < 0 or y_new >= H:
                 continue
@@ -111,6 +65,41 @@ def reprojection(image, depth_map, M, RT):
         new_image[k[0], k[1]] = v["color"]
 
     return new_image.astype(np.uint8)
+
+
+def fill(image):
+    """
+    Take all black pixels in image and fill them with average of surrounding
+    non-black pixels.
+    """
+    H, W, C = image.shape
+
+    def get_neighbors(u, v):
+        nbrs = [
+            (u-1, v-1), (u-1, v), (u-1, v+1), (u, v-1), (u, v+1), (u+1, v-1), (u+1, v), (u+1, v+1)
+        ]
+        for i in reversed(range(len(nbrs))):
+            u, v = nbrs[i]
+            if u < 0 or u >= H or v < 0 or v >= W:
+                nbrs.pop(i)
+            else:
+                px = image[u][v]
+                if not px.any():
+                    nbrs.pop(i)
+        return nbrs
+
+    filled_new_image = np.copy(image)
+    for u in range(H):
+        for v in range(W):
+            px = image[u][v]
+            if not px.any():
+                nbrs = get_neighbors(u, v)
+                # Only smooth the black pixel if it has at least 4 non-black neighbors.
+                if len(nbrs) >= 4:
+                    colors = np.array([image[u][v] for u, v in nbrs])
+                    filled_new_image[u][v] = np.average(colors)
+
+    return filled_new_image.astype(np.uint8)
 
 
 if __name__ == '__main__':
@@ -157,12 +146,11 @@ if __name__ == '__main__':
     RT[:, 3] = T
     print("RT\n", RT)
 
-    greyscale_img = get_greyscale_img(image)
-    greyscale_img_path = os.path.join(output_directory, "{}_greyscale.jpeg".format(output_name))
-    io.imsave(greyscale_img_path, greyscale_img.astype(np.uint8))
-
-    new_image = reprojection(greyscale_img, depth_map, M, RT)
+    new_image = reprojection(image, depth_map, M, RT)
+    filled_new_image = fill(new_image)
 
     reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.jpeg".format(output_name))
+    reprojected_filled_image_path = os.path.join(final_output_directory, "{}_filled.jpeg".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
+    io.imsave(reprojected_filled_image_path, filled_new_image)
