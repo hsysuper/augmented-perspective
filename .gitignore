@@ -1,10 +1,15 @@
 **/__pycache*
 env/*
 pyvenv.cfg
+**/.DS_Store
+
+# Outputs
+outputs/*
+output_images/*
 
 # Monodepth2
 models/monodepth2/models
-models/monodepth2/assets/*_disp.jpeg
-models/monodepth2/assets/*_disp.npy
-models/monodepth2/assets/test_image_*.npy
-models/monodepth2/assets/test_image_*.jpeg
+
+# Boosting
+models/boosting/midas/model.pt
+models/boosting/pix2pix/checkpoints
