@@ -105,20 +105,27 @@ def fill(image):
     return filled_new_image.astype(np.uint8)
 
 
-def run_augmented_perspective(argv):
+def run_augmented_perspective(argv, save_filled_only=False,
+        ANGLE=15, TRANSLATION=-0.3, FRAMES=0,
+        output_directory="output_images",
+):
     args = parse_args()
+
+    if not FRAMES:
+        ANGLES = [ANGLE]
+        TRANSLATIONS = [TRANSLATION]
+    else:
+        ANGLES = np.linspace(0, ANGLE, FRAMES)
+        TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
+
     image_path = args.image_path
     depth_map_path = args.depth_map_path
 
     output_name = pathlib.Path(depth_map_path).stem
-    output_directory = pathlib.Path("outputs")
-    final_output_directory = pathlib.Path("output_images")
-    os.makedirs(final_output_directory, exist_ok=True)
+    os.makedirs(output_directory, exist_ok=True)
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
-    print("image size", image.shape)
-    print("depth map size", depth_map.shape)
 
     M_map = {
         "kitti1.png": "09_26",
@@ -135,31 +142,34 @@ def run_augmented_perspective(argv):
         print("NOTE: Could not find intrinsic matrix. Using calibrate() function.")
         M = calibrate(depth_map)
 
-    # ROTATIONS
-    a = math.pi * 0 / 180
-    b = math.pi * 15 / 180
-    g = math.pi * 0 / 180
-    RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]], dtype=np.float64)
-    RY = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]], dtype=np.float64)
-    RZ = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]], dtype=np.float64)
-    R = RZ.dot(RY.dot(RX))
+    for i in range(FRAMES):
 
-    # TRANSLATIONS
-    T = np.array([-0.3, 0, 0, 1], dtype=np.float64)
+        # ROTATIONS
+        a = math.pi * 0 / 180
+        b = math.pi * ANGLES[i] / 180
+        g = math.pi * 0 / 180
+        RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]], dtype=np.float64)
+        RY = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]], dtype=np.float64)
+        RZ = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]], dtype=np.float64)
+        R = RZ.dot(RY.dot(RX))
 
-    RT = np.zeros((4, 4), dtype=np.float64)
-    RT[0:3, 0:3] = R
-    RT[:, 3] = T
-    print("RT\n", RT)
+        # TRANSLATIONS
+        T = np.array([TRANSLATIONS[i], 0, 0, 1], dtype=np.float64)
 
-    new_image = reprojection(image, depth_map, M, RT)
-    filled_new_image = fill(new_image)
+        RT = np.zeros((4, 4), dtype=np.float64)
+        RT[0:3, 0:3] = R
+        RT[:, 3] = T
+        print("RT\n", RT)
 
-    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.png".format(output_name))
-    reprojected_filled_image_path = os.path.join(final_output_directory, "{}_filled.png".format(output_name))
-    print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
-    io.imsave(reprojected_image_path, new_image)
-    io.imsave(reprojected_filled_image_path, filled_new_image)
+        new_image = reprojection(image, depth_map, M, RT)
+        filled_new_image = fill(new_image)
+
+        reprojected_image_path = os.path.join(output_directory, f"{output_name}_reprojected_{i}.png")
+        reprojected_filled_image_path = os.path.join(output_directory, f"{output_name}_filled_{i}.png")
+        print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
+        if not save_filled_only:
+            io.imsave(reprojected_image_path, new_image)
+        io.imsave(reprojected_filled_image_path, filled_new_image)
 
 
 if __name__ == '__main__':
