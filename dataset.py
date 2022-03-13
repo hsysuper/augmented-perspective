@@ -63,5 +63,4 @@ if __name__ == '__main__':
     num_images = dataset.get_number_of_images()
     image1,image2,T = dataset.get_image(args.image1_index, args.image2_index)
 
-    dm = depth_model.MonodepthDM('monodepth2',image1)
-    depth_map = dm.get_monodepth_depth_map()
+    
