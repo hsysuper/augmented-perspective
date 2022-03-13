@@ -109,15 +109,10 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLE=15, TRANSLATION=-0.3, FRAMES=0,
         output_directory="output_images",
 ):
+    print("before", sys.argv)
+    sys.argv = argv
+    print("after", sys.argv)
     args = parse_args()
-
-    if not FRAMES:
-        ANGLES = [ANGLE]
-        TRANSLATIONS = [TRANSLATION]
-    else:
-        ANGLES = np.linspace(0, ANGLE, FRAMES)
-        TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
-
     image_path = args.image_path
     depth_map_path = args.depth_map_path
 
@@ -141,6 +136,13 @@ def run_augmented_perspective(argv, save_filled_only=False,
     except:
         print("NOTE: Could not find intrinsic matrix. Using calibrate() function.")
         M = calibrate(depth_map)
+
+    if not FRAMES:
+        ANGLES = [ANGLE]
+        TRANSLATIONS = [TRANSLATION]
+    else:
+        ANGLES = np.linspace(0, ANGLE, FRAMES)
+        TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
 
     for i in range(FRAMES):
 
