@@ -120,20 +120,25 @@ if __name__ == '__main__':
 
     output_name = pathlib.Path(depth_map_path).stem
     output_directory = pathlib.Path("outputs")
+    final_output_directory = pathlib.Path("output_images")
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
-    # M = calibrate(depth_map)
-    # M = np.array([
-    #     [7.070493e+02, 0.000000e+00, 6.040814e+02, 4.575831e+01],
-    #     [0.000000e+00, 7.070493e+02, 1.805066e+02, -3.454157e-01],
-    #     [0.000000e+00, 0.000000e+00, 1.000000e+00, 4.981016e-03],
-    # ])
-    M = np.array([
-        [7.070493e+02, 0.000000e+00, 6.040814e+02, 0],
-        [0.000000e+00, 7.070493e+02, 1.805066e+02, 0],
-        [0.000000e+00, 0.000000e+00, 1.000000e+00, 0],
-    ])
+
+    M_map = {
+        "kitti1.png": "09_26",
+        "kitti2.png": "09_28",
+        "kitti3.png": "09_26",
+        "kitti4.png": "09_26",
+        "kitti5.png": "09_26",
+    }
+
+    try:
+        M = np.loadtxt(f"intrinsic_matrices/kitti_calib_cam_to_cam_{M_map[pathlib.Path(image_path).name]}.txt")
+        M = M.reshape((3, 4))
+    except:
+        print("NOTE: Could not find intrinsic matrix. Using calibrate() function.")
+        M = calibrate(depth_map)
 
     # ROTATIONS
     a = math.pi * 0 / 180
@@ -158,6 +163,6 @@ if __name__ == '__main__':
 
     new_image = reprojection(greyscale_img, depth_map, M, RT)
 
-    reprojected_image_path = os.path.join(output_directory, "{}_reprojected.jpeg".format(output_name))
+    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.jpeg".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
