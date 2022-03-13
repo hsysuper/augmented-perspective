@@ -21,8 +21,7 @@ import numpy as np
 import warnings
 warnings.simplefilter('ignore', np.RankWarning)
 
-# select device
-device = torch.device("cpu")
+device = None
 
 # Global variables
 pix2pixmodel = None
@@ -37,6 +36,9 @@ def get_depth_map(option, parser):
     print("Reading images from {}".format(option.image_path))
     dataset = ImageDataset(option.image_path, option.image_files)
 
+    # select device
+    global device
+    device = torch.device(option.device)
     print("device: %s" % device)
     # Load merge network
     options_parser = TestOptions()
@@ -216,7 +218,8 @@ def get_depth_map(option, parser):
             imageandpatchs.set_updated_estimate(tobemergedto)
 
         # Output the result
-        path = os.path.join(result_dir, f"{images.name}_boosting_disp")
+        path = os.path.join(result_dir, f"{images.name}_boosting_depth")
+        print("Output size {}".format(imageandpatchs.estimation_updated_image.shape))
         midas_utils.write_depth(path, cv2.resize(imageandpatchs.estimation_updated_image,
                                                  (input_resolution[1], input_resolution[0]),
                                                  interpolation=cv2.INTER_CUBIC),
