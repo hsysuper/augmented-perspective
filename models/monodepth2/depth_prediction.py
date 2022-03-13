@@ -38,7 +38,7 @@ def get_depth_map(args, parser):
     assert args.model_name is not None, \
         "You must specify the --model_name parameter; see README.md for an example"
 
-    device = torch.device("cpu")
+    device = torch.device(args.device)
 
     download_model_if_doesnt_exist(args.model_name)
     model_path = os.path.join("models", args.model_name)
@@ -123,7 +123,7 @@ def get_depth_map(args, parser):
             name_resized_dest_npy = os.path.join(output_directory, "{}_resized_disp.npy".format(output_name))
             np.save(name_resized_dest_npy, disp_resized.cpu().numpy())
             resized_disp_scaled, depth_resized = disp_to_depth(disp_resized, 1, 1000)
-            name_resized_depth_npy = os.path.join(output_directory, "{}_resized_depth.npy".format(output_name))
+            name_resized_depth_npy = os.path.join(output_directory, "{}_depth.npy".format(output_name))
             np.save(name_resized_depth_npy, depth_resized.squeeze().cpu().numpy())
 
             # Saving colormapped depth image
@@ -135,7 +135,7 @@ def get_depth_map(args, parser):
             colormapped_im = (mapper.to_rgba(disp_resized_np)[:, :, :3] * 255).astype(np.uint8)
             im = pil.fromarray(colormapped_im)
 
-            name_dest_im = os.path.join(output_directory, "{}_disp.jpeg".format(output_name))
+            name_dest_im = os.path.join(output_directory, "{}_depth.png".format(output_name))
             im.save(name_dest_im)
 
             print("   Processed {:d} of {:d} images - saved predictions to:".format(

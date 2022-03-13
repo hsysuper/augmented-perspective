@@ -34,6 +34,6 @@ def write_depth(path, depth, bits=1 , colored=False):
         cv2.imwrite(path+'.png', out.astype("uint16"))
 
     print("Saving depth data {} to {}".format(depth.shape, path+'.npy'))
-    np.save(path+'.npy', depth)
+    np.save(path+'.npy', out)
 
     return
