@@ -1,9 +1,12 @@
 import argparse
 import os
-import numpy as np
 import math
-from skimage import io
 import pathlib
+import sys
+
+import numpy as np
+from skimage import io
+
 from calibration import calibrate
 
 
@@ -102,7 +105,7 @@ def fill(image):
     return filled_new_image.astype(np.uint8)
 
 
-if __name__ == '__main__':
+def run_augmented_perspective(argv):
     args = parse_args()
     image_path = args.image_path
     depth_map_path = args.depth_map_path
@@ -110,9 +113,12 @@ if __name__ == '__main__':
     output_name = pathlib.Path(depth_map_path).stem
     output_directory = pathlib.Path("outputs")
     final_output_directory = pathlib.Path("output_images")
+    os.makedirs(final_output_directory, exist_ok=True)
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
+    print("image size", image.shape)
+    print("depth map size", depth_map.shape)
 
     M_map = {
         "kitti1.png": "09_26",
@@ -149,8 +155,12 @@ if __name__ == '__main__':
     new_image = reprojection(image, depth_map, M, RT)
     filled_new_image = fill(new_image)
 
-    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.jpeg".format(output_name))
-    reprojected_filled_image_path = os.path.join(final_output_directory, "{}_filled.jpeg".format(output_name))
+    reprojected_image_path = os.path.join(final_output_directory, "{}_reprojected.png".format(output_name))
+    reprojected_filled_image_path = os.path.join(final_output_directory, "{}_filled.png".format(output_name))
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
     io.imsave(reprojected_filled_image_path, filled_new_image)
+
+
+if __name__ == '__main__':
+    run_augmented_perspective(sys.argv)
