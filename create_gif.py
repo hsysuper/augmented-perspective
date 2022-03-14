@@ -7,7 +7,8 @@ from augmented_perspective import run_augmented_perspective, parse_args
 
 """
 Usage:
-    python -m create_gif --image_path assets/kitti1.png --depth_map_path outputs/kitti1_monodepth2_resized_depth.npy
+    python -m create_gif --image_path assets/kitti1.png --monodepth2
+    python -m create_gif --image_path assets/kitti1.png --boosting
 """
 
 if __name__ == '__main__':
@@ -16,8 +17,11 @@ if __name__ == '__main__':
     TRANSLATION = -0.5
     FRAMES = 30
 
-    stem = pathlib.Path(parse_args().depth_map_path).stem
-    dirname = f"{stem}_{ANGLE},{TRANSLATION}"
+    args = parse_args()
+
+    image_name = pathlib.Path(args.image_path).stem
+    output_name = f"{image_name}_{'monodepth2' if args.monodepth2 else 'boosting'}"
+    dirname = f"{output_name}_{ANGLE},{TRANSLATION}"
     folder = pathlib.Path(f"output_images/{dirname}")
 
     # Generate all frames of images.
