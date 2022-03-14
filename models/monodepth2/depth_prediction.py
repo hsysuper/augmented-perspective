@@ -12,6 +12,7 @@ import numpy as np
 import PIL.Image as pil
 import matplotlib as mpl
 import matplotlib.cm as cm
+import time
 
 import torch
 from torchvision import transforms, datasets
@@ -89,6 +90,7 @@ def get_depth_map(args, parser):
     # PREDICTING ON EACH IMAGE IN TURN
     with torch.no_grad():
         for idx, image_path in enumerate(paths):
+            start_time = time.time()
 
             if image_path.endswith("_disp.jpg"):
                 # don't try to predict disparity for a disparity image!
@@ -143,5 +145,6 @@ def get_depth_map(args, parser):
                 idx + 1, len(paths)))
             print("   - {}".format(name_dest_im))
             print("   - {}".format(name_dest_npy))
+            print("Time taken: {} seconds".format(time.time() - start_time))
 
     print('-> Done!')

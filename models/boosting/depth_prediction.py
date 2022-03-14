@@ -16,6 +16,7 @@ from .pix2pix.models.pix2pix4depth_model import Pix2Pix4DepthModel
 
 import os
 import torch
+import time
 import cv2
 import numpy as np
 import warnings
@@ -75,6 +76,7 @@ def get_depth_map(option, parser):
     print("start processing")
     for image_ind, images in enumerate(dataset):
         print('processing image', image_ind, ':', images.name)
+        start_time = time.time()
 
         # Load image from dataset
         img = images.rgb_image
@@ -224,6 +226,7 @@ def get_depth_map(option, parser):
                                                  (input_resolution[1], input_resolution[0]),
                                                  interpolation=cv2.INTER_CUBIC),
                                 bits=2, colored=True)
+        print("Time taken: {} seconds".format(time.time() - start_time))
 
     print("finished")
 
