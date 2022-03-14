@@ -3,6 +3,7 @@ import os
 import math
 import pathlib
 import sys
+import time
 
 import numpy as np
 from skimage import io
@@ -106,6 +107,7 @@ def fill(image):
 
 
 def run_augmented_perspective(argv):
+    start_time = time.time()
     print("before", sys.argv)
     sys.argv = argv
     print("after", sys.argv)
@@ -163,6 +165,7 @@ def run_augmented_perspective(argv):
     print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
     io.imsave(reprojected_image_path, new_image)
     io.imsave(reprojected_filled_image_path, filled_new_image)
+    print("Time taken: {} seconds".format(time.time() - start_time))
 
 
 if __name__ == '__main__':
