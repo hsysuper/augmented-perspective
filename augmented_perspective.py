@@ -9,6 +9,11 @@ from skimage import io
 
 from calibration import calibrate
 
+"""
+Usage:
+    python -m augmented_perspective --image_path assets/kitti1.png --monodepth2
+    python -m augmented_perspective --image_path assets/kitti1.png --boosting
+"""
 
 def parse_args():
     """
@@ -18,9 +23,10 @@ def parse_args():
     parser.add_argument('--image_path', type=str,
                         help='path to a test image',
                         required=True)
-    parser.add_argument('--depth_map_path', type=str,
-                        help='path to a test image depth map',
-                        required=True)
+    parser.add_argument('--monodepth2', action='store_true',
+                        default=False)
+    parser.add_argument('--boosting', action='store_true',
+                        default=False)
     return parser.parse_args()
 
 
@@ -109,12 +115,15 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLE=15, TRANSLATION=-0.3, FRAMES=0,
         output_directory="output_images",
 ):
-    # print("before", sys.argv)
     sys.argv = argv
-    # print("after", sys.argv)
     args = parse_args()
+    if args.monodepth2 == args.boosting:
+        raise Exception("Must use either '--monodepth2' or '--boosting' flag.")
+
     image_path = args.image_path
-    depth_map_path = args.depth_map_path
+    image_name = pathlib.Path(image_path).stem
+    output_name = f"{image_name}_{'monodepth2' if args.monodepth2 else 'boosting'}"
+    depth_map_path = f"outputs/{output_name}_depth.npy"
 
     output_name = pathlib.Path(depth_map_path).stem
     os.makedirs(output_directory, exist_ok=True)
