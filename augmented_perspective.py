@@ -31,6 +31,11 @@ def parse_args():
     return parser.parse_args()
 
 
+def normalize_depth_map(depth, scale_ratio):
+    normalized_depth = depth / scale_ratio
+    return normalized_depth
+
+
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
@@ -113,7 +118,7 @@ def fill(image):
 
 
 def run_augmented_perspective(argv, save_filled_only=False,
-        ANGLE=15, TRANSLATION=-0.3, FRAMES=0,
+        ANGLE=15, TRANSLATION=-0.3, FRAMES=0, SCALE_RATIO=51,
         output_directory="output_images",
 ):
     sys.argv = argv
@@ -131,6 +136,10 @@ def run_augmented_perspective(argv, save_filled_only=False,
 
     image = io.imread(image_path)
     depth_map = np.load(depth_map_path)
+
+    if args.boosting:
+        print("scale_ratio={}".format(SCALE_RATIO))
+        depth_map = normalize_depth_map(depth_map, SCALE_RATIO)
 
     M_map = {
         "kitti1.png": "09_26",
