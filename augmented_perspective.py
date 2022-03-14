@@ -3,6 +3,7 @@ import os
 import math
 import pathlib
 import sys
+import time
 
 import numpy as np
 from skimage import io
@@ -153,7 +154,9 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLES = np.linspace(0, ANGLE, FRAMES)
         TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
 
+    durations = []
     for i in range(len(ANGLES)):
+        start_time = time.time()
 
         # ROTATIONS
         a = math.pi * 0 / 180
@@ -182,6 +185,10 @@ def run_augmented_perspective(argv, save_filled_only=False,
         if not save_filled_only:
             io.imsave(reprojected_image_path, new_image)
         io.imsave(reprojected_filled_image_path, filled_new_image)
+        duration = time.time() - start_time
+        print("Time taken: {} seconds".format(duration))
+        durations.append(duration)
+    print("Average time per frame: {} seconds".format(sum(durations) / len(durations)))
 
 
 if __name__ == '__main__':
