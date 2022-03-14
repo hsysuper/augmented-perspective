@@ -47,7 +47,8 @@ def write_depth(path, depth, bits=1 , colored=False):
 
 
     # scale to 1 to 1000
-    scaled_disp, scaled_depth = disp_to_depth(depth, 1, 1000)
+    scaled_depth = 1000 - 999 * (depth - depth_min) / (depth_max - depth_min)
+    # scaled_disp, scaled_depth = disp_to_depth(depth, 1, 1000)
     print("Saving depth data {} to {}".format(scaled_depth.shape, path+'.npy'))
     np.save(path+'.npy', scaled_depth)
     print(scaled_depth)
