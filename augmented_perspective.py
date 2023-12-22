@@ -1,5 +1,4 @@
 import argparse
-import os
 import math
 import pathlib
 import sys
@@ -8,26 +7,31 @@ import time
 import numpy as np
 from skimage import io
 
+import datasets
+
 from calibration import calibrate
+from depth_model import get_depth_model_list
 
 """
 Usage:
-    python -m augmented_perspective --image_path assets/kitti1.png --monodepth2
-    python -m augmented_perspective --image_path assets/kitti1.png --boosting
+    python -m augmented_perspective --image_path <path-to-image> --model <model-name>
 """
+
 
 def parse_args():
     """
-    Arg parser for CMD line.
+    Arg parser for command line.
     """
-    parser = argparse.ArgumentParser(description='Augmented perspective module initialization.')
-    parser.add_argument('--image_path', type=str,
-                        help='path to a test image',
+    models_list = get_depth_model_list()
+    parser = argparse.ArgumentParser(description="Augmented perspective module initialization.")
+    parser.add_argument("--image_path", type=pathlib.Path, help="path to a test image", required=True)
+    parser.add_argument("--depth_map_path", type=pathlib.Path, help="path to depth map of test image",
                         required=True)
-    parser.add_argument('--monodepth2', action='store_true',
-                        default=False)
-    parser.add_argument('--boosting', action='store_true',
-                        default=False)
+    parser.add_argument("--depth_model", type=str,
+                        help=f"name of depth model used for creating depth map under models/, allowed = {models_list}",
+                        choices=models_list, required=True)
+    parser.add_argument("--output_path", type=pathlib.Path, help="output path", default=pathlib.Path("outputs"))
+    parser.add_argument("--intrinsic_matrix", type=pathlib.Path, help="Camera intrinsic matrix")
     return parser.parse_args()
 
 
@@ -119,38 +123,27 @@ def fill(image):
 
 def run_augmented_perspective(argv, save_filled_only=False,
         ANGLE=15, TRANSLATION=-0.3, FRAMES=0, SCALE_RATIO=51,
-        output_directory="output_images",
 ):
     sys.argv = argv
     args = parse_args()
-    if args.monodepth2 == args.boosting:
-        raise Exception("Must use either '--monodepth2' or '--boosting' flag.")
 
-    image_path = args.image_path
-    image_name = pathlib.Path(image_path).stem
-    output_name = f"{image_name}_{'monodepth2' if args.monodepth2 else 'boosting'}"
-    depth_map_path = f"outputs/{output_name}_depth.npy"
+    image_name = args.image_path.stem
+    output_name = f"{image_name}_{args.depth_model}"
+    if not args.depth_map_path:
+        args.depth_map_path = f"outputs/{output_name}_depth.npy"
 
-    output_name = pathlib.Path(depth_map_path).stem
-    os.makedirs(output_directory, exist_ok=True)
+    args.output_path.mkdir(parents=True, exist_ok=True)
 
-    image = io.imread(image_path)
-    depth_map = np.load(depth_map_path)
+    image = io.imread(args.image_path)
+    depth_map = np.load(args.depth_map_path)
 
-    if args.boosting:
+    if args.model == "boosting":
         print("scale_ratio={}".format(SCALE_RATIO))
         depth_map = normalize_depth_map(depth_map, SCALE_RATIO)
 
-    M_map = {
-        "kitti1.png": "09_26",
-        "kitti2.png": "09_28",
-        "kitti3.png": "09_26",
-        "kitti4.png": "09_26",
-        "kitti5.png": "09_26",
-    }
-
     try:
-        M = np.loadtxt(f"intrinsic_matrices/kitti_calib_cam_to_cam_{M_map[pathlib.Path(image_path).name]}.txt")
+        intrinsic_matrix_path = datasets.get_intrinsic_matrix(args.image_path)
+        M = np.loadtxt(intrinsic_matrix_path)
         M = M.reshape((3, 4))
     except:
         print("NOTE: Could not find intrinsic matrix. Using calibrate() function.")
@@ -188,8 +181,8 @@ def run_augmented_perspective(argv, save_filled_only=False,
         filled_new_image = fill(new_image)
 
         suffix = "" if not FRAMES else f"_{i}"
-        reprojected_image_path = os.path.join(output_directory, f"{output_name}_reprojected{suffix}.png")
-        reprojected_filled_image_path = os.path.join(output_directory, f"{output_name}_filled{suffix}.png")
+        reprojected_image_path = args.output_path, pathlib.Path(f"{output_name}_reprojected{suffix}.png")
+        reprojected_filled_image_path =  args.output_path / pathlib.Path(f"{output_name}_filled{suffix}.png")
         print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
         if not save_filled_only:
             io.imsave(reprojected_image_path, new_image)
