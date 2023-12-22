@@ -20,6 +20,7 @@ from torchvision import transforms, datasets
 from . import networks
 from .utils import download_model_if_doesnt_exist
 
+from models.base_model import BaseDepthModel
 
 def disp_to_depth(disp, min_depth, max_depth):
     """Convert network's sigmoid output into depth prediction
@@ -148,3 +149,13 @@ def get_depth_map(args, parser):
             print("Time taken: {} seconds".format(time.time() - start_time))
 
     print('-> Done!')
+
+
+class DepthModel(BaseDepthModel):
+    def __init__(self, name: str, args, parser):
+        vars(args)['model_name'] = "mono_1024x320"
+        super().__init__(name, args, parser)
+
+    def get_depth_map(self):
+        print(self.args)
+        return monodepth2.get_depth_map(self.args, self.parser)

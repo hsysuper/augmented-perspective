@@ -20,6 +20,9 @@ import time
 import cv2
 import numpy as np
 import warnings
+
+from models.base_model import BaseDepthModel
+
 warnings.simplefilter('ignore', np.RankWarning)
 
 device = None
@@ -391,3 +394,16 @@ def estimatemidas(img, msize):
         prediction = 0
 
     return prediction
+
+
+class DepthModel(BaseDepthModel):
+    def __init__(self, name: str, args, parser):
+        vars(args)['net_receptive_field_size'] = 384
+        vars(args)['patch_netsize'] = 2 * 384
+        vars(args)['pix2pixsize'] = 1024
+        vars(args)['max_res'] = np.inf
+        vars(args)['gpu_ids'] = "-1"
+        super().__init__(name, args, parser)
+
+    def get_depth_map(self):
+        return boosting.get_depth_map(self.args, self.parser)
