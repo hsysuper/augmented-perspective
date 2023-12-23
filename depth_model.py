@@ -5,11 +5,6 @@ import os
 import pathlib
 import sys
 
-from models import monodepth2
-from models import boosting
-importlib.reload(monodepth2)
-importlib.reload(boosting)
-
 
 """
 USAGE:
@@ -84,8 +79,8 @@ def run_depth_model(argv):
         models_list = [args.depth_model]
 
     for model_name in models_list:
-        depth_model_module = importlib.import_module(f"models.{model_name}")
-        depth_model = depth_model_module.depth_prediction.DepthModel
+        depth_model_module = importlib.import_module(f"models.{model_name}.depth_prediction")
+        depth_model = depth_model_module.DepthModel
 
         args_cp = argparse.Namespace(**vars(args))
         parser_cp = argparse.ArgumentParser(parents=[parser], add_help=False)

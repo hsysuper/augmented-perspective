@@ -36,7 +36,7 @@ GPU_threshold = 1600 - 32 # Limit for the GPU (NVIDIA RTX 2080), can be adjusted
 
 
 # MAIN PART OF OUR METHOD
-def get_depth_map(option, parser):
+def boosting_get_depth_map(option, parser):
     print("Reading images from {}".format(option.image_path))
     dataset = ImageDataset(option.image_path, option.image_files)
 
@@ -397,6 +397,7 @@ def estimatemidas(img, msize):
 
 
 class DepthModel(BaseDepthModel):
+
     def __init__(self, name: str, args, parser):
         vars(args)['net_receptive_field_size'] = 384
         vars(args)['patch_netsize'] = 2 * 384
@@ -406,4 +407,8 @@ class DepthModel(BaseDepthModel):
         super().__init__(name, args, parser)
 
     def get_depth_map(self):
-        return boosting.get_depth_map(self.args, self.parser)
+        return boosting_get_depth_map(self.args, self.parser)
+
+    @staticmethod
+    def require_normalization():
+        return True
