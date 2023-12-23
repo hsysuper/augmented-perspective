@@ -6,8 +6,10 @@ def parse_args():
     """
     Arg parser for CMD line.
     """
-    parser = argparse.ArgumentParser(description='Calibration module initialization.')
-    parser.add_argument('--depth_map_path', type=str,
+    parser = argparse.ArgumentParser(
+        description='Calibration module initialization.')
+    parser.add_argument('--depth_map_path',
+                        type=str,
                         help='path to a test image depth map',
                         required=True)
     return parser.parse_args()
@@ -32,10 +34,12 @@ def calibrate(depth_map):
     """
 
     def get_u_row(x, y, z, u, v):
-        return np.array([x, y, z, 1, 0, 0, 0, 0, -u * x, -u * y, -u * z, -u], dtype=np.float64)
+        return np.array([x, y, z, 1, 0, 0, 0, 0, -u * x, -u * y, -u * z, -u],
+                        dtype=np.float64)
 
     def get_v_row(x, y, z, u, v):
-        return np.array([0, 0, 0, 0, x, y, z, 1, -v * x, -v * y, -v * z, -v], dtype=np.float64)
+        return np.array([0, 0, 0, 0, x, y, z, 1, -v * x, -v * y, -v * z, -v],
+                        dtype=np.float64)
 
     print("depth_map.shape", depth_map.shape)
     H, W = depth_map.shape

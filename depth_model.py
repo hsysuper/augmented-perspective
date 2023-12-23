@@ -4,8 +4,6 @@ import importlib
 import os
 import pathlib
 import sys
-
-
 """
 USAGE:
 From the augmented-perspective directory...
@@ -28,18 +26,20 @@ From the augmented-perspective directory...
     BOOSTING ONLY:
         python -m depth_model --depth_model boosting
 """
-
-
 """
 Context manager to easily set working directory when running
 each depth estimation method so we don't need to refactor as much.
 """
+
+
 @contextlib.contextmanager
 def change_path(newdir):
     old_path = os.getcwd()
     os.chdir(os.path.expanduser(newdir))
-    try: yield
-    finally: os.chdir(old_path)
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
 
 
 def get_depth_model_list():
@@ -55,12 +55,20 @@ def get_parser():
     """
     models_list = get_depth_model_list()
     parser = argparse.ArgumentParser(description='Depth model initialization.')
-    parser.add_argument("--depth_model", type=str,
-                        help=f"name of depth model used for creating depth map under models/, allowed = {models_list}",
-                        choices=models_list)
-    parser.add_argument('--image_path', type=pathlib.Path, default='assets/',
+    parser.add_argument(
+        "--depth_model",
+        type=str,
+        help=
+        f"name of depth model used for creating depth map under models/, allowed = {models_list}",
+        choices=models_list)
+    parser.add_argument('--image_path',
+                        type=pathlib.Path,
+                        default='assets/',
                         help='path to a test image or folder of images')
-    parser.add_argument("--output_path", type=pathlib.Path, help="output path", default=pathlib.Path("outputs"))
+    parser.add_argument("--output_path",
+                        type=pathlib.Path,
+                        help="output path",
+                        default=pathlib.Path("outputs"))
     parser.add_argument('--device', type=str, default='cpu')
     return parser
 
@@ -79,7 +87,8 @@ def run_depth_model(argv):
         models_list = [args.depth_model]
 
     for model_name in models_list:
-        depth_model_module = importlib.import_module(f"models.{model_name}.depth_prediction")
+        depth_model_module = importlib.import_module(
+            f"models.{model_name}.depth_prediction")
         depth_model = depth_model_module.DepthModel
 
         args_cp = argparse.Namespace(**vars(args))

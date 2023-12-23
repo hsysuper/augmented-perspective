@@ -3,6 +3,7 @@ import torch.nn as nn
 
 
 class BaseModel(torch.nn.Module):
+
     def load(self, path):
         """Load model from file.
 

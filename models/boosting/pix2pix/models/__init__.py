@@ -30,7 +30,8 @@ def find_model_using_name(model_name):
     and it is case-insensitive.
     """
     model_filename = "." + model_name + "_model"
-    modellib = importlib.import_module(model_filename, package='models.boosting.pix2pix.models')
+    modellib = importlib.import_module(
+        model_filename, package='models.boosting.pix2pix.models')
     model = None
     target_model_name = model_name.replace('_', '') + 'model'
     for name, cls in modellib.__dict__.items():
@@ -39,7 +40,9 @@ def find_model_using_name(model_name):
             model = cls
 
     if model is None:
-        print("In %s.py, there should be a subclass of BaseModel with class name that matches %s in lowercase." % (model_filename, target_model_name))
+        print(
+            "In %s.py, there should be a subclass of BaseModel with class name that matches %s in lowercase."
+            % (model_filename, target_model_name))
         exit(0)
 
     return model
