@@ -34,7 +34,7 @@ def disp_to_depth(disp, min_depth, max_depth):
     return scaled_disp, depth
 
 
-def get_depth_map(args, parser):
+def monodepth2_get_depth_map(args, parser):
     """Function to predict for a single image or folder of images
     """
     assert args.model_name is not None, \
@@ -158,4 +158,4 @@ class DepthModel(BaseDepthModel):
 
     def get_depth_map(self):
         print(self.args)
-        return monodepth2.get_depth_map(self.args, self.parser)
+        return monodepth2_get_depth_map(self.args, self.parser)

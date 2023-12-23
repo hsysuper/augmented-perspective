@@ -1,8 +1,11 @@
 import argparse
+import logging
 import math
 import pathlib
+import importlib
 import sys
 import time
+import traceback
 
 import numpy as np
 from skimage import io
@@ -14,7 +17,7 @@ from depth_model import get_depth_model_list
 
 """
 Usage:
-    python -m augmented_perspective --image_path <path-to-image> --model <model-name>
+    python -m augmented_perspective --image_path <path-to-image> --depth_model <model-name>
 """
 
 
@@ -32,6 +35,10 @@ def parse_args():
                         choices=models_list, required=True)
     parser.add_argument("--output_path", type=pathlib.Path, help="output path", default=pathlib.Path("outputs"))
     parser.add_argument("--intrinsic_matrix", type=pathlib.Path, help="Camera intrinsic matrix")
+    parser.add_argument("-d", "--debug",
+                        help="Print lots of debugging statements up to DEBUG level",
+                        action="store_const", dest="log_level", const=logging.DEBUG,
+                        default=logging.INFO)
     return parser.parse_args()
 
 
@@ -49,7 +56,7 @@ def reprojection(image, depth_map, M, RT):
     :param RT: translation matrix (3, 4)
     :return: reprojected image
     """
-    print("Start reprojection")
+    logging.info("Start reprojection")
     M_square = np.zeros((4, 4), dtype=np.float64)
     M_square[:3, :] = M
     M_square[3, 3] = 1
@@ -127,6 +134,11 @@ def run_augmented_perspective(argv, save_filled_only=False,
     sys.argv = argv
     args = parse_args()
 
+    logging.basicConfig(
+        format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+        level=args.log_level,
+        datefmt='%Y-%m-%d %H:%M:%S')
+
     image_name = args.image_path.stem
     output_name = f"{image_name}_{args.depth_model}"
     if not args.depth_map_path:
@@ -137,16 +149,22 @@ def run_augmented_perspective(argv, save_filled_only=False,
     image = io.imread(args.image_path)
     depth_map = np.load(args.depth_map_path)
 
-    if args.model == "boosting":
-        print("scale_ratio={}".format(SCALE_RATIO))
+    logging.info(f"Optional steps for depth mode {args.depth_model}")
+    depth_model_module = importlib.import_module(f"models.{args.depth_model}.depth_prediction")
+    depth_model = depth_model_module.DepthModel
+    if depth_model.require_normalization():
+        logging.info("normalizing with scale_ratio={}".format(SCALE_RATIO))
         depth_map = normalize_depth_map(depth_map, SCALE_RATIO)
 
+    logging.info(f"Getting intrinsic matrix for {args.image_path}")
     try:
         intrinsic_matrix_path = datasets.get_intrinsic_matrix(args.image_path)
-        M = np.loadtxt(intrinsic_matrix_path)
+        logging.info(f"Found intrinsic matrix file {intrinsic_matrix_path}")
+        M = np.loadtxt(str(intrinsic_matrix_path))
         M = M.reshape((3, 4))
-    except:
-        print("NOTE: Could not find intrinsic matrix. Using calibrate() function.")
+    except Exception as e:
+        logging.info(f"NOTE: Could not find intrinsic matrix. Using calibrate() function. Reason: {e}")
+        logging.info(traceback.format_exc())
         M = calibrate(depth_map)
 
     if not FRAMES:
@@ -156,8 +174,10 @@ def run_augmented_perspective(argv, save_filled_only=False,
         ANGLES = np.linspace(0, ANGLE, FRAMES)
         TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
 
+    logging.info(f"Start re-projection for angles: {ANGLES}")
     durations = []
     for i in range(len(ANGLES)):
+        logging.info(f"Start re-projection at {ANGLES[i]} degree clockwise around b axis")
         start_time = time.time()
 
         # ROTATIONS
@@ -175,22 +195,23 @@ def run_augmented_perspective(argv, save_filled_only=False,
         RT = np.zeros((4, 4), dtype=np.float64)
         RT[0:3, 0:3] = R
         RT[:, 3] = T
-        print("RT\n", RT)
+        logging.info(f"RT: {RT}\n")
 
         new_image = reprojection(image, depth_map, M, RT)
         filled_new_image = fill(new_image)
 
         suffix = "" if not FRAMES else f"_{i}"
         reprojected_image_path = args.output_path, pathlib.Path(f"{output_name}_reprojected{suffix}.png")
-        reprojected_filled_image_path =  args.output_path / pathlib.Path(f"{output_name}_filled{suffix}.png")
-        print("Saving image {} to {}".format(new_image.shape, reprojected_image_path))
+        reprojected_filled_image_path = args.output_path / pathlib.Path(f"{output_name}_reprojected_filled{suffix}.png")
         if not save_filled_only:
-            io.imsave(reprojected_image_path, new_image)
-        io.imsave(reprojected_filled_image_path, filled_new_image)
+            logging.info(f"Saving image {new_image.shape} to {reprojected_image_path}")
+            io.imsave(str(reprojected_image_path), new_image)
+        logging.info(f"Saving filled image {filled_new_image.shape} to {reprojected_filled_image_path}")
+        io.imsave(str(reprojected_filled_image_path), filled_new_image)
         duration = time.time() - start_time
-        print("Time taken: {} seconds".format(duration))
+        logging.info(f"Time taken: {duration} seconds")
         durations.append(duration)
-    print("Average time per frame: {} seconds".format(sum(durations) / len(durations)))
+    logging.info(f"Average time per frame: {sum(durations) / len(durations)} seconds")
 
 
 if __name__ == '__main__':

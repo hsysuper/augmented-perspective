@@ -7,8 +7,7 @@ from augmented_perspective import run_augmented_perspective, parse_args
 
 """
 Usage:
-    python -m create_gif --image_path assets/kitti1.png --monodepth2
-    python -m create_gif --image_path assets/kitti1.png --boosting
+    python -m create_gif --image_path <path-to-image> --depth_model <model-name>
 """
 
 if __name__ == '__main__':
@@ -20,7 +19,7 @@ if __name__ == '__main__':
     args = parse_args()
 
     image_name = pathlib.Path(args.image_path).stem
-    output_name = f"{image_name}_{'monodepth2' if args.monodepth2 else 'boosting'}"
+    output_name = f"{image_name}_{args.depth_model}"
     dirname = f"{output_name}_{ANGLE},{TRANSLATION}"
     folder = pathlib.Path(f"output_images/{dirname}")
 
