@@ -11,9 +11,8 @@ def _make_encoder(features, use_pretrained):
 
 def _make_resnet_backbone(resnet):
     pretrained = nn.Module()
-    pretrained.layer1 = nn.Sequential(
-        resnet.conv1, resnet.bn1, resnet.relu, resnet.maxpool, resnet.layer1
-    )
+    pretrained.layer1 = nn.Sequential(resnet.conv1, resnet.bn1, resnet.relu,
+                                      resnet.maxpool, resnet.layer1)
 
     pretrained.layer2 = resnet.layer2
     pretrained.layer3 = resnet.layer3
@@ -23,25 +22,38 @@ def _make_resnet_backbone(resnet):
 
 
 def _make_pretrained_resnext101_wsl(use_pretrained):
-    resnet = torch.hub.load("facebookresearch/WSL-Images:main", "resnext101_32x8d_wsl")
+    resnet = torch.hub.load("facebookresearch/WSL-Images:main",
+                            "resnext101_32x8d_wsl")
     return _make_resnet_backbone(resnet)
 
 
 def _make_scratch(in_shape, out_shape):
     scratch = nn.Module()
 
-    scratch.layer1_rn = nn.Conv2d(
-        in_shape[0], out_shape, kernel_size=3, stride=1, padding=1, bias=False
-    )
-    scratch.layer2_rn = nn.Conv2d(
-        in_shape[1], out_shape, kernel_size=3, stride=1, padding=1, bias=False
-    )
-    scratch.layer3_rn = nn.Conv2d(
-        in_shape[2], out_shape, kernel_size=3, stride=1, padding=1, bias=False
-    )
-    scratch.layer4_rn = nn.Conv2d(
-        in_shape[3], out_shape, kernel_size=3, stride=1, padding=1, bias=False
-    )
+    scratch.layer1_rn = nn.Conv2d(in_shape[0],
+                                  out_shape,
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1,
+                                  bias=False)
+    scratch.layer2_rn = nn.Conv2d(in_shape[1],
+                                  out_shape,
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1,
+                                  bias=False)
+    scratch.layer3_rn = nn.Conv2d(in_shape[2],
+                                  out_shape,
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1,
+                                  bias=False)
+    scratch.layer4_rn = nn.Conv2d(in_shape[3],
+                                  out_shape,
+                                  kernel_size=3,
+                                  stride=1,
+                                  padding=1,
+                                  bias=False)
     return scratch
 
 
@@ -72,9 +84,10 @@ class Interpolate(nn.Module):
             tensor: interpolated data
         """
 
-        x = self.interp(
-            x, scale_factor=self.scale_factor, mode=self.mode, align_corners=False
-        )
+        x = self.interp(x,
+                        scale_factor=self.scale_factor,
+                        mode=self.mode,
+                        align_corners=False)
 
         return x
 
@@ -91,13 +104,19 @@ class ResidualConvUnit(nn.Module):
         """
         super().__init__()
 
-        self.conv1 = nn.Conv2d(
-            features, features, kernel_size=3, stride=1, padding=1, bias=True
-        )
+        self.conv1 = nn.Conv2d(features,
+                               features,
+                               kernel_size=3,
+                               stride=1,
+                               padding=1,
+                               bias=True)
 
-        self.conv2 = nn.Conv2d(
-            features, features, kernel_size=3, stride=1, padding=1, bias=True
-        )
+        self.conv2 = nn.Conv2d(features,
+                               features,
+                               kernel_size=3,
+                               stride=1,
+                               padding=1,
+                               bias=True)
 
         self.relu = nn.ReLU(inplace=True)
 
@@ -146,8 +165,9 @@ class FeatureFusionBlock(nn.Module):
 
         output = self.resConfUnit2(output)
 
-        output = nn.functional.interpolate(
-            output, scale_factor=2, mode="bilinear", align_corners=True
-        )
+        output = nn.functional.interpolate(output,
+                                           scale_factor=2,
+                                           mode="bilinear",
+                                           align_corners=True)
 
         return output

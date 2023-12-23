@@ -14,7 +14,6 @@ import datasets
 
 from calibration import calibrate
 from depth_model import get_depth_model_list
-
 """
 Usage:
     python -m augmented_perspective --image_path <path-to-image> --depth_model <model-name>
@@ -26,19 +25,38 @@ def parse_args():
     Arg parser for command line.
     """
     models_list = get_depth_model_list()
-    parser = argparse.ArgumentParser(description="Augmented perspective module initialization.")
-    parser.add_argument("--image_path", type=pathlib.Path, help="path to a test image", required=True)
-    parser.add_argument("--depth_map_path", type=pathlib.Path, help="path to depth map of test image",
+    parser = argparse.ArgumentParser(
+        description="Augmented perspective module initialization.")
+    parser.add_argument("--image_path",
+                        type=pathlib.Path,
+                        help="path to a test image",
                         required=True)
-    parser.add_argument("--depth_model", type=str,
-                        help=f"name of depth model used for creating depth map under models/, allowed = {models_list}",
-                        choices=models_list, required=True)
-    parser.add_argument("--output_path", type=pathlib.Path, help="output path", default=pathlib.Path("outputs"))
-    parser.add_argument("--intrinsic_matrix", type=pathlib.Path, help="Camera intrinsic matrix")
-    parser.add_argument("-d", "--debug",
-                        help="Print lots of debugging statements up to DEBUG level",
-                        action="store_const", dest="log_level", const=logging.DEBUG,
-                        default=logging.INFO)
+    parser.add_argument("--depth_map_path",
+                        type=pathlib.Path,
+                        help="path to depth map of test image",
+                        required=True)
+    parser.add_argument(
+        "--depth_model",
+        type=str,
+        help=
+        f"name of depth model used for creating depth map under models/, allowed = {models_list}",
+        choices=models_list,
+        required=True)
+    parser.add_argument("--output_path",
+                        type=pathlib.Path,
+                        help="output path",
+                        default=pathlib.Path("outputs"))
+    parser.add_argument("--intrinsic_matrix",
+                        type=pathlib.Path,
+                        help="Camera intrinsic matrix")
+    parser.add_argument(
+        "-d",
+        "--debug",
+        help="Print lots of debugging statements up to DEBUG level",
+        action="store_const",
+        dest="log_level",
+        const=logging.DEBUG,
+        default=logging.INFO)
     return parser.parse_args()
 
 
@@ -84,8 +102,13 @@ def reprojection(image, depth_map, M, RT):
             # There may be multiple pixels in the 3D world that map to the same
             # new 2D pixel. We should save the one with the least depth as that
             # is what the camera would see. Everything else is occluded.
-            if (y_new, x_new) not in px_to_depth_and_color or z < px_to_depth_and_color[(y_new, x_new)]["depth"]:
-                px_to_depth_and_color[(y_new, x_new)] = {"depth": z, "color": image[v,u]}
+            if (y_new, x_new
+                ) not in px_to_depth_and_color or z < px_to_depth_and_color[(
+                    y_new, x_new)]["depth"]:
+                px_to_depth_and_color[(y_new, x_new)] = {
+                    "depth": z,
+                    "color": image[v, u]
+                }
 
     for k, v in px_to_depth_and_color.items():
         new_image[k[0], k[1]] = v["color"]
@@ -101,9 +124,8 @@ def fill(image):
     H, W, C = image.shape
 
     def get_neighbors(u, v):
-        nbrs = [
-            (u-1, v-1), (u-1, v), (u-1, v+1), (u, v-1), (u, v+1), (u+1, v-1), (u+1, v), (u+1, v+1)
-        ]
+        nbrs = [(u - 1, v - 1), (u - 1, v), (u - 1, v + 1), (u, v - 1),
+                (u, v + 1), (u + 1, v - 1), (u + 1, v), (u + 1, v + 1)]
         for i in reversed(range(len(nbrs))):
             u, v = nbrs[i]
             if u < 0 or u >= H or v < 0 or v >= W:
@@ -128,8 +150,13 @@ def fill(image):
     return filled_new_image.astype(np.uint8)
 
 
-def run_augmented_perspective(argv, save_filled_only=False,
-        ANGLE=15, TRANSLATION=-0.3, FRAMES=0, SCALE_RATIO=51,
+def run_augmented_perspective(
+    argv,
+    save_filled_only=False,
+    ANGLE=15,
+    TRANSLATION=-0.3,
+    FRAMES=0,
+    SCALE_RATIO=51,
 ):
     sys.argv = argv
     args = parse_args()
@@ -150,7 +177,8 @@ def run_augmented_perspective(argv, save_filled_only=False,
     depth_map = np.load(args.depth_map_path)
 
     logging.info(f"Optional steps for depth mode {args.depth_model}")
-    depth_model_module = importlib.import_module(f"models.{args.depth_model}.depth_prediction")
+    depth_model_module = importlib.import_module(
+        f"models.{args.depth_model}.depth_prediction")
     depth_model = depth_model_module.DepthModel
     if depth_model.require_normalization():
         logging.info("normalizing with scale_ratio={}".format(SCALE_RATIO))
@@ -163,7 +191,9 @@ def run_augmented_perspective(argv, save_filled_only=False,
         M = np.loadtxt(str(intrinsic_matrix_path))
         M = M.reshape((3, 4))
     except Exception as e:
-        logging.info(f"NOTE: Could not find intrinsic matrix. Using calibrate() function. Reason: {e}")
+        logging.info(
+            f"NOTE: Could not find intrinsic matrix. Using calibrate() function. Reason: {e}"
+        )
         logging.info(traceback.format_exc())
         M = calibrate(depth_map)
 
@@ -177,16 +207,24 @@ def run_augmented_perspective(argv, save_filled_only=False,
     logging.info(f"Start re-projection for angles: {ANGLES}")
     durations = []
     for i in range(len(ANGLES)):
-        logging.info(f"Start re-projection at {ANGLES[i]} degree clockwise around b axis")
+        logging.info(
+            f"Start re-projection at {ANGLES[i]} degree clockwise around b axis"
+        )
         start_time = time.time()
 
         # ROTATIONS
         a = math.pi * 0 / 180
         b = math.pi * ANGLES[i] / 180
         g = math.pi * 0 / 180
-        RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)], [0, math.sin(a), math.cos(a)]], dtype=np.float64)
-        RY = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0], [-math.sin(b), 0, math.cos(b)]], dtype=np.float64)
-        RZ = np.array([[math.cos(g), -math.sin(g), 0], [math.sin(g), math.cos(g), 0], [0, 0, 1]], dtype=np.float64)
+        RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)],
+                       [0, math.sin(a), math.cos(a)]],
+                      dtype=np.float64)
+        RY = np.array([[math.cos(b), 0, math.sin(b)], [0, 1, 0],
+                       [-math.sin(b), 0, math.cos(b)]],
+                      dtype=np.float64)
+        RZ = np.array([[math.cos(g), -math.sin(g), 0],
+                       [math.sin(g), math.cos(g), 0], [0, 0, 1]],
+                      dtype=np.float64)
         R = RZ.dot(RY.dot(RX))
 
         # TRANSLATIONS
@@ -201,17 +239,23 @@ def run_augmented_perspective(argv, save_filled_only=False,
         filled_new_image = fill(new_image)
 
         suffix = "" if not FRAMES else f"_{i}"
-        reprojected_image_path = args.output_path, pathlib.Path(f"{output_name}_reprojected{suffix}.png")
-        reprojected_filled_image_path = args.output_path / pathlib.Path(f"{output_name}_reprojected_filled{suffix}.png")
+        reprojected_image_path = args.output_path, pathlib.Path(
+            f"{output_name}_reprojected{suffix}.png")
+        reprojected_filled_image_path = args.output_path / pathlib.Path(
+            f"{output_name}_reprojected_filled{suffix}.png")
         if not save_filled_only:
-            logging.info(f"Saving image {new_image.shape} to {reprojected_image_path}")
+            logging.info(
+                f"Saving image {new_image.shape} to {reprojected_image_path}")
             io.imsave(str(reprojected_image_path), new_image)
-        logging.info(f"Saving filled image {filled_new_image.shape} to {reprojected_filled_image_path}")
+        logging.info(
+            f"Saving filled image {filled_new_image.shape} to {reprojected_filled_image_path}"
+        )
         io.imsave(str(reprojected_filled_image_path), filled_new_image)
         duration = time.time() - start_time
         logging.info(f"Time taken: {duration} seconds")
         durations.append(duration)
-    logging.info(f"Average time per frame: {sum(durations) / len(durations)} seconds")
+    logging.info(
+        f"Average time per frame: {sum(durations) / len(durations)} seconds")
 
 
 if __name__ == '__main__':
