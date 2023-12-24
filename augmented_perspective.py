@@ -227,9 +227,7 @@ def run_augmented_perspective(
     logging.info(f"Start re-projection for angles: {angles}")
     durations = []
     for i in range(len(angles)):
-        logging.info(
-            f"Start re-projection at {angles[i]} degree clockwise around b axis"
-        )
+        logging.info(f"Start re-projection at {angles[i]} degree clockwise around b axis")
         start_time = time.time()
 
         # ROTATIONS
