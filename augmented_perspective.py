@@ -1,8 +1,8 @@
 import argparse
+import importlib
 import logging
 import math
 import pathlib
-import importlib
 import sys
 import time
 import traceback
@@ -11,7 +11,6 @@ import numpy as np
 from skimage import io
 
 import datasets
-
 from calibration import calibrate
 from depth_model import get_depth_model_list
 """
@@ -60,14 +59,22 @@ def parse_args():
     return parser.parse_args()
 
 
-def normalize_depth_map(depth, scale_ratio):
-    normalized_depth = depth / scale_ratio
-    return normalized_depth
+def normalize_depth_map(depth_map, scale_ratio: float):
+    """
+    Normalize the depth map
+
+    :param depth_map: depth map input
+    :param scale_ratio: scaling ratio in float
+    :return:
+    """
+    normalized_depth_map = depth_map / scale_ratio
+    return normalized_depth_map
 
 
 def reprojection(image, depth_map, M, RT):
     """
     Reproject using a translation matrix
+
     :param image: input greyscale image (H, W)
     :param depth_map depth map
     :param M: camera matrix
@@ -120,6 +127,9 @@ def fill(image):
     """
     Take all black pixels in image and fill them with average of surrounding
     non-black pixels.
+
+    :param image: image array
+    :return: filled image array
     """
     H, W, C = image.shape
 
@@ -153,11 +163,22 @@ def fill(image):
 def run_augmented_perspective(
     argv,
     save_filled_only=False,
-    ANGLE=15,
-    TRANSLATION=-0.3,
-    FRAMES=0,
-    SCALE_RATIO=51,
+    angle=15,
+    translation=-0.3,
+    frames=0,
+    scale_ratio=51,
 ):
+    """
+    Run augmented perspective algorithm to change perspective of the input image
+
+    :param argv: input command line arguments array free sys.argv
+    :param save_filled_only: whether to only save the filled image without saving raw rotation only images
+    :param angle: angles in degree to rotate the image perspective
+    :param translation: linear translation of the camera
+    :param frames: number of frames to rotate, 0 if only one frame is needed. As a result 0 and 1 has the same effect
+    :param scale_ratio: scaling ratio of the image
+    :return: None, save image to disk
+    """
     sys.argv = argv
     args = parse_args()
 
@@ -181,8 +202,8 @@ def run_augmented_perspective(
         f"models.{args.depth_model}.depth_prediction")
     depth_model = depth_model_module.DepthModel
     if depth_model.require_normalization():
-        logging.info("normalizing with scale_ratio={}".format(SCALE_RATIO))
-        depth_map = normalize_depth_map(depth_map, SCALE_RATIO)
+        logging.info("normalizing with scale_ratio={}".format(scale_ratio))
+        depth_map = normalize_depth_map(depth_map, scale_ratio)
 
     logging.info(f"Getting intrinsic matrix for {args.image_path}")
     try:
@@ -192,29 +213,28 @@ def run_augmented_perspective(
         M = M.reshape((3, 4))
     except Exception as e:
         logging.info(
-            f"NOTE: Could not find intrinsic matrix. Using calibrate() function. Reason: {e}"
-        )
+            f"Could not find intrinsic matrix. Using calibrate(). Reason: {e}")
         logging.info(traceback.format_exc())
         M = calibrate(depth_map)
 
-    if not FRAMES:
-        ANGLES = [ANGLE]
-        TRANSLATIONS = [TRANSLATION]
+    if not frames:
+        angles = [angle]
+        translations = [translation]
     else:
-        ANGLES = np.linspace(0, ANGLE, FRAMES)
-        TRANSLATIONS = np.linspace(0, TRANSLATION, FRAMES)
+        angles = np.linspace(0, angle, frames)
+        translations = np.linspace(0, translation, frames)
 
-    logging.info(f"Start re-projection for angles: {ANGLES}")
+    logging.info(f"Start re-projection for angles: {angles}")
     durations = []
-    for i in range(len(ANGLES)):
+    for i in range(len(angles)):
         logging.info(
-            f"Start re-projection at {ANGLES[i]} degree clockwise around b axis"
+            f"Start re-projection at {angles[i]} degree clockwise around b axis"
         )
         start_time = time.time()
 
         # ROTATIONS
         a = math.pi * 0 / 180
-        b = math.pi * ANGLES[i] / 180
+        b = math.pi * angles[i] / 180
         g = math.pi * 0 / 180
         RX = np.array([[1, 0, 0], [0, math.cos(a), -math.sin(a)],
                        [0, math.sin(a), math.cos(a)]],
@@ -227,8 +247,8 @@ def run_augmented_perspective(
                       dtype=np.float64)
         R = RZ.dot(RY.dot(RX))
 
-        # TRANSLATIONS
-        T = np.array([TRANSLATIONS[i], 0, 0, 1], dtype=np.float64)
+        # translations
+        T = np.array([translations[i], 0, 0, 1], dtype=np.float64)
 
         RT = np.zeros((4, 4), dtype=np.float64)
         RT[0:3, 0:3] = R
@@ -238,7 +258,7 @@ def run_augmented_perspective(
         new_image = reprojection(image, depth_map, M, RT)
         filled_new_image = fill(new_image)
 
-        suffix = "" if not FRAMES else f"_{i}"
+        suffix = "" if not frames else f"_{i}"
         reprojected_image_path = args.output_path, pathlib.Path(
             f"{output_name}_reprojected{suffix}.png")
         reprojected_filled_image_path = args.output_path / pathlib.Path(

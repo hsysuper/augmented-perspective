@@ -1,9 +1,10 @@
 import argparse
+import math
+
+import cv2
+import numpy as np
 import torch
 import torch.nn.functional as F
-import numpy as np
-import math
-import cv2
 
 tensorify = lambda x: torch.Tensor(x.transpose(
     (2, 0, 1))).unsqueeze(0).float().div(255.0)
@@ -12,9 +13,13 @@ tensorify = lambda x: torch.Tensor(x.transpose(
 def gaussian(window_size, sigma):
     """
     Generates a list of Tensor values drawn from a gaussian distribution with standard
-    diviation = sigma and sum of all elements = 1.
+    deviation = sigma and sum of all elements = 1.
 
     Length of list = window_size
+
+    :param window_size: window size
+    :param sigma: sigma for the gaussian model
+    :return:
     """
     gauss = torch.Tensor([
         math.exp(-(x - window_size // 2)**2 / float(2 * sigma**2))
@@ -24,6 +29,13 @@ def gaussian(window_size, sigma):
 
 
 def create_window(window_size, channel=1):
+    """
+    Create an evaluation window for image analysis
+
+    :param window_size: size of the square window
+    :param channel: number of channels
+    :return: [window_size, window_size, channel] array
+    """
 
     # Generate an 1D tensor containing values sampled from a gaussian distribution
     _1d_window = gaussian(window_size=window_size, sigma=1.5).unsqueeze(1)
@@ -45,11 +57,23 @@ def ssim(img1,
          window=None,
          size_average=True,
          full=False):
+    """
+    SSIM loss calculator
 
+    :param img1:
+    :param img2:
+    :param val_range:
+    :param window_size:
+    :param window:
+    :param size_average:
+    :param full:
+    :return:
+    """
     L = val_range    # L is the dynamic range of the pixel values (255 for 8-bit grayscale images),
 
     pad = window_size // 2
 
+    # Not sure if image array is 4D or 3D, try 4D first
     try:
         _, channels, height, width = img1.size()
     except:
@@ -104,7 +128,15 @@ def ssim(img1,
     return ret
 
 
-def SSIM(img1_path, img2_path, num_channels):
+def ssim_wrapper(img1_path, img2_path, num_channels):
+    """
+    Wrapper for SSIM loss
+
+    :param img1_path: path to first image in string
+    :param img2_path: path to second image in string
+    :param num_channels: number of channels to calculate
+    :return:
+    """
     if num_channels == 1:
         image_1 = cv2.imread(img1_path, cv2.IMREAD_GRAYSCALE)
         image_2 = cv2.imread(img2_path, cv2.IMREAD_GRAYSCALE)
@@ -124,7 +156,15 @@ def SSIM(img1_path, img2_path, num_channels):
     return ssim(_img1, _img2, window=my_window, val_range=255)
 
 
-def L2(img1, img2, num_channels):
+def l2_distance(img1_path, img2_path, num_channels):
+    """
+    L2 distance loss function
+
+    :param img1_path: path to first image in string
+    :param img2_path: path to second image in string
+    :param num_channels: number of channels to calculate
+    :return:
+    """
     if num_channels == 1:
         image_1 = cv2.imread(img1_path, cv2.IMREAD_GRAYSCALE)
         image_2 = cv2.imread(img2_path, cv2.IMREAD_GRAYSCALE)
@@ -137,6 +177,11 @@ def L2(img1, img2, num_channels):
 
 
 def parse_args():
+    """
+    Parse command line arguments
+
+    :return: command line input parser
+    """
     parser = argparse.ArgumentParser(
         description='Evaluation Metric Selection.')
     parser.add_argument("eval_metric",
@@ -157,10 +202,10 @@ if __name__ == '__main__':
     img2_path = args.img2_path
     num_channels = args.num_channels
     if args.eval_metric == "L2":
-        l2_score = L2(img1_path, img2_path, num_channels)
+        l2_score = l2_distance(img1_path, img2_path, num_channels)
         print("L2 Score = ", l2_score)
     elif args.eval_metric == "SSIM":
-        ssim_score = SSIM(img1_path, img2_path, num_channels)
+        ssim_score = ssim_wrapper(img1_path, img2_path, num_channels)
         print("SSIM Score = ", ssim_score)
     else:
         print(

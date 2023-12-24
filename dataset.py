@@ -1,7 +1,8 @@
-from skimage import io
-import numpy as np
 import argparse
 import json
+
+import numpy as np
+from skimage import io
 
 
 class Dataset:
