@@ -4,38 +4,39 @@ import importlib
 import os
 import pathlib
 import sys
+
+import models.base_model
 """
 USAGE:
 From the augmented-perspective directory...
 
 1) CHOOSE THE IMAGES TO WORK ON
 
-    DEFAULT (all images in 'assets/'):
-        python -m depth_model
     ENTIRE DIR:
-        python -m depth_model --image_path assets/
+        python -m depth_model --image_path datasets/
     SINGLE FILE:
-        python -m depth_model --image_path assets/test_image.jpg
+        python -m depth_model --image_path <path-to-image>
 
 2) CHOOSE THE MODELS TO TEST
 
     DEFAULT (all models):
         python -m depth_model
-    MONODEPTH2 ONLY:
-        python -m depth_model --depth_model monodepth2
-    BOOSTING ONLY:
-        python -m depth_model --depth_model boosting
-"""
-"""
-Context manager to easily set working directory when running
-each depth estimation method so we don't need to refactor as much.
+    A SINGLE MODEL ONLY:
+        python -m depth_model --depth_model <model-name>
 """
 
 
 @contextlib.contextmanager
-def change_path(newdir):
-    old_path = os.getcwd()
-    os.chdir(os.path.expanduser(newdir))
+def change_path(new_dir: pathlib.Path):
+    """
+    Context manager to easily set working directory when running each depth estimation method, so we don't need to
+    refactor as much.
+
+    :param new_dir: new directory to work in
+    :return: None
+    """
+    old_path = pathlib.Path.cwd()
+    os.chdir(new_dir.resolve())
     try:
         yield
     finally:
@@ -43,6 +44,9 @@ def change_path(newdir):
 
 
 def get_depth_model_list():
+    """
+    :return: A list of depth models that can be imported
+    """
     script_dir = pathlib.Path(__file__).resolve().parent
     models_dir = script_dir / "models"
     models_list = [f.parts[-1] for f in models_dir.iterdir() if f.is_dir()]
@@ -51,7 +55,7 @@ def get_depth_model_list():
 
 def get_parser():
     """
-    Arg parser for CMD line.
+    Arg parser for command line.
     """
     models_list = get_depth_model_list()
     parser = argparse.ArgumentParser(description='Depth model initialization.')
@@ -89,13 +93,15 @@ def run_depth_model(argv):
     for model_name in models_list:
         depth_model_module = importlib.import_module(
             f"models.{model_name}.depth_prediction")
-        depth_model = depth_model_module.DepthModel
+        depth_model_class: models.base_model.BaseDepthModel.__class__ = depth_model_module.DepthModel
 
         args_cp = argparse.Namespace(**vars(args))
         parser_cp = argparse.ArgumentParser(parents=[parser], add_help=False)
-        dm = depth_model(model_name, args_cp, parser_cp)
-        with change_path(f'./models/{model_name}'):
-            dm.get_depth_map()
+        depth_model = depth_model_class(model_name, args_cp, parser_cp)
+        with change_path(
+                pathlib.Path(__file__).resolve().parent /
+                f'models/{model_name}'):
+            depth_model.get_depth_map()
 
 
 if __name__ == '__main__':

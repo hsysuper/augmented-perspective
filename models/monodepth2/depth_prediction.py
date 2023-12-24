@@ -6,27 +6,32 @@
 
 from __future__ import absolute_import, division, print_function
 
-import os
 import glob
-import numpy as np
+import os
+import time
+
 import PIL.Image as pil
 import matplotlib as mpl
 import matplotlib.cm as cm
-import time
-
+import numpy as np
 import torch
-from torchvision import transforms, datasets
+from torchvision import transforms
 
+from models.base_model import BaseDepthModel
 from . import networks
 from .utils import download_model_if_doesnt_exist
 
-from models.base_model import BaseDepthModel
-
 
 def disp_to_depth(disp, min_depth, max_depth):
-    """Convert network's sigmoid output into depth prediction
+    """
+    Convert network's sigmoid output into depth prediction
     The formula for this conversion is given in the 'additional considerations'
     section of the paper.
+
+    :param disp: inverse depth estimation scores from sigmoid output
+    :param min_depth: minimum depth value
+    :param max_depth: maximum depth value
+    :return: converted depth value
     """
     min_disp = 1 / max_depth
     max_disp = 1 / min_depth
@@ -35,8 +40,12 @@ def disp_to_depth(disp, min_depth, max_depth):
     return scaled_disp, depth
 
 
-def monodepth2_get_depth_map(args, parser):
-    """Function to predict for a single image or folder of images
+def monodepth2_get_depth_map(args):
+    """
+    Function to predict for a single image or folder of images
+
+    :param args: arguments parsed in upper layer
+    :return: arrry of depth estimation
     """
     assert args.model_name is not None, \
         "You must specify the --model_name parameter; see README.md for an example"
@@ -175,4 +184,4 @@ class DepthModel(BaseDepthModel):
 
     def get_depth_map(self):
         print(self.args)
-        return monodepth2_get_depth_map(self.args, self.parser)
+        return monodepth2_get_depth_map(self.args)

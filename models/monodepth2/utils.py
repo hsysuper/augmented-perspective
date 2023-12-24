@@ -5,9 +5,11 @@
 # available in the LICENSE file.
 
 from __future__ import absolute_import, division, print_function
-import os
+
 import hashlib
+import os
 import zipfile
+
 from six.moves import urllib
 
 

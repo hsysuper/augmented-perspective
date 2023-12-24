@@ -25,9 +25,9 @@ if __name__ == '__main__':
     # Generate all frames of images.
     run_augmented_perspective(sys.argv,
                               save_filled_only=True,
-                              ANGLE=ANGLE,
-                              TRANSLATION=TRANSLATION,
-                              FRAMES=FRAMES,
+                              angle=ANGLE,
+                              translation=TRANSLATION,
+                              frames=FRAMES,
                               output_directory=folder)
 
     # Create gif once all images have been generated.
