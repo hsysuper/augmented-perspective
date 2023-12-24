@@ -5,106 +5,76 @@ import os
 import pathlib
 import sys
 
-import numpy as np
-
-from models import monodepth2
-from models import boosting
-importlib.reload(monodepth2)
-importlib.reload(boosting)
-
-
+import models.base_model
 """
 USAGE:
 From the augmented-perspective directory...
 
 1) CHOOSE THE IMAGES TO WORK ON
 
-    DEFAULT (all images in 'assets/'):
-        python -m depth_model
     ENTIRE DIR:
-        python -m depth_model --image_path assets/
+        python -m depth_model --image_path datasets/
     SINGLE FILE:
-        python -m depth_model --image_path assets/test_image.jpg
+        python -m depth_model --image_path <path-to-image>
 
 2) CHOOSE THE MODELS TO TEST
 
     DEFAULT (all models):
         python -m depth_model
-    MONODEPTH2 ONLY:
-        python -m depth_model --monodepth2
-    BOOSTING ONLY:
-        python -m depth_model --boosting
+    A SINGLE MODEL ONLY:
+        python -m depth_model --depth_model <model-name>
 """
 
 
-class DepthModel:
-    def __init__(self, name: str, args, parser):
-        self.name = name
-        if os.path.isdir(args.image_path):
-            vars(args)['image_path'] = '../../' + args.image_path
-            vars(args)['image_files'] = None
-        else:
-            path = pathlib.Path(args.image_path)
-            vars(args)['image_path'] = '../../' + str(path.parent)
-            vars(args)['image_files'] = [str(path.name)]
-        vars(args)['output_path'] = '../../' + args.output_path
-        self.args = args
-        self.parser = parser
-
-
-class MonodepthDM(DepthModel):
-    def __init__(self, name: str, args, parser):
-        vars(args)['model_name'] = "mono_1024x320"
-        super().__init__(name, args, parser)
-
-    def get_depth_map(self):
-        print(self.args)
-        return monodepth2.get_depth_map(self.args, self.parser)
-
-
-class BoostingDM(DepthModel):
-    def __init__(self, name: str, args, parser):
-        vars(args)['net_receptive_field_size'] = 384
-        vars(args)['patch_netsize'] = 2 * 384
-        vars(args)['pix2pixsize'] = 1024
-        vars(args)['max_res'] = np.inf
-        vars(args)['gpu_ids'] = "-1"
-        super().__init__(name, args, parser)
-
-    def get_depth_map(self):
-        return boosting.get_depth_map(self.args, self.parser)
-
-"""
-Context manager to easily set working directory when running
-each depth estimation method so we don't need to refactor as much.
-"""
 @contextlib.contextmanager
-def change_path(newdir):
-    old_path = os.getcwd()
-    os.chdir(os.path.expanduser(newdir))
-    try: yield
-    finally: os.chdir(old_path)
+def change_path(new_dir: pathlib.Path):
+    """
+    Context manager to easily set working directory when running each depth estimation method, so we don't need to
+    refactor as much.
+
+    :param new_dir: new directory to work in
+    :return: None
+    """
+    old_path = pathlib.Path.cwd()
+    os.chdir(new_dir.resolve())
+    try:
+        yield
+    finally:
+        os.chdir(old_path)
 
 
-"""
-Arg parser for CMD line.
-"""
+def get_depth_model_list():
+    """
+    :return: A list of depth models that can be imported
+    """
+    script_dir = pathlib.Path(__file__).resolve().parent
+    models_dir = script_dir / "models"
+    models_list = [f.parts[-1] for f in models_dir.iterdir() if f.is_dir()]
+    return models_list
+
+
 def get_parser():
+    """
+    Arg parser for command line.
+    """
+    models_list = get_depth_model_list()
     parser = argparse.ArgumentParser(description='Depth model initialization.')
-    parser.add_argument('--image_path', type=str, default='assets/',
+    parser.add_argument(
+        "--depth_model",
+        type=str,
+        help=
+        f"name of depth model used for creating depth map under models/, allowed = {models_list}",
+        choices=models_list)
+    parser.add_argument('--image_path',
+                        type=pathlib.Path,
+                        default='assets/',
                         help='path to a test image or folder of images')
-    parser.add_argument('--monodepth2', action='store_true', default=False)
-    parser.add_argument('--boosting', action='store_true', default=False)
-    parser.add_argument('--output_path', type=str, default='outputs/')
+    parser.add_argument("--output_path",
+                        type=pathlib.Path,
+                        help="output path",
+                        default=pathlib.Path("outputs"))
     parser.add_argument('--device', type=str, default='cpu')
     return parser
-
-
-DEPTH_MODELS = [
-    (MonodepthDM, 'monodepth2'),
-    (BoostingDM, 'boosting'),
-    # Add more models here...
-]
 
 
 def run_depth_model(argv):
@@ -113,22 +83,25 @@ def run_depth_model(argv):
     print("after", sys.argv)
     parser = get_parser()
     args = parser.parse_args()
-    os.makedirs(args.output_path, exist_ok=True)
+    args.output_path.mkdir(parents=True, exist_ok=True)
 
-    # Run all the models by default if none are specified.
-    if not args.monodepth2 and not args.boosting:
-        vars(args)['monodepth2'] = True
-        vars(args)['boosting'] = True
+    models_list = get_depth_model_list()
 
-    for cls, name in DEPTH_MODELS:
-        if not vars(args)[name]:
-            continue
+    if args.depth_model:
+        models_list = [args.depth_model]
+
+    for model_name in models_list:
+        depth_model_module = importlib.import_module(
+            f"models.{model_name}.depth_prediction")
+        depth_model_class: models.base_model.BaseDepthModel.__class__ = depth_model_module.DepthModel
 
         args_cp = argparse.Namespace(**vars(args))
         parser_cp = argparse.ArgumentParser(parents=[parser], add_help=False)
-        dm = cls(name, args_cp, parser_cp)
-        with change_path(f'./models/{name}'):
-            dm.get_depth_map()
+        depth_model = depth_model_class(model_name, args_cp, parser_cp)
+        with change_path(
+                pathlib.Path(__file__).resolve().parent /
+                f'models/{model_name}'):
+            depth_model.get_depth_map()
 
 
 if __name__ == '__main__':

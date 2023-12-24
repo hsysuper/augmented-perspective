@@ -5,9 +5,11 @@
 # available in the LICENSE file.
 
 from __future__ import absolute_import, division, print_function
-import os
+
 import hashlib
+import os
 import zipfile
+
 from six.moves import urllib
 
 
@@ -17,12 +19,12 @@ def download_model_if_doesnt_exist(model_name):
     # values are tuples of (<google cloud URL>, <md5 checksum>)
     download_paths = {
         "mono_640x192":
-            ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_640x192.zip",
-             "a964b8356e08a02d009609d9e3928f7c"),
+        ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_640x192.zip",
+         "a964b8356e08a02d009609d9e3928f7c"),
         "mono_1024x320":
-            ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_1024x320.zip",
-             "0ab0766efdfeea89a0d9ea8ba90e1e63"),
-        }
+        ("https://storage.googleapis.com/niantic-lon-static/research/monodepth2/mono_1024x320.zip",
+         "0ab0766efdfeea89a0d9ea8ba90e1e63"),
+    }
 
     if not os.path.exists("models"):
         os.makedirs("models")
@@ -41,12 +43,17 @@ def download_model_if_doesnt_exist(model_name):
 
         model_url, required_md5checksum = download_paths[model_name]
 
-        if not check_file_matches_md5(required_md5checksum, model_path + ".zip"):
-            print("-> Downloading pretrained model to {}".format(model_path + ".zip"))
+        if not check_file_matches_md5(required_md5checksum,
+                                      model_path + ".zip"):
+            print("-> Downloading pretrained model to {}".format(model_path +
+                                                                 ".zip"))
             urllib.request.urlretrieve(model_url, model_path + ".zip")
 
-        if not check_file_matches_md5(required_md5checksum, model_path + ".zip"):
-            print("   Failed to download a file which matches the checksum - quitting")
+        if not check_file_matches_md5(required_md5checksum,
+                                      model_path + ".zip"):
+            print(
+                "   Failed to download a file which matches the checksum - quitting"
+            )
             quit()
 
         print("   Unzipping model...")
