@@ -49,7 +49,17 @@ def get_depth_model_list():
     """
     script_dir = pathlib.Path(__file__).resolve().parent
     models_dir = script_dir / "models"
-    models_list = [f.parts[-1] for f in models_dir.iterdir() if f.is_dir()]
+    models_list = []
+    for f in models_dir.iterdir():
+        if not f.is_dir():
+            continue
+        if f.stem.startswith("__"):
+            continue
+        for ff in f.iterdir():
+            if ff.is_dir():
+                continue
+            if ff.name == "__init__.py":
+                models_list.append(f.parts[-1])
     return models_list
 
 
