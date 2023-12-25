@@ -19,7 +19,7 @@ Usage:
 """
 
 
-def parse_args():
+def get_argument_parser():
     """
     Arg parser for command line.
     """
@@ -29,25 +29,52 @@ def parse_args():
     parser.add_argument("--image_path",
                         type=pathlib.Path,
                         help="path to a test image",
-                        required=True)
+                        default=None)
     parser.add_argument("--depth_map_path",
                         type=pathlib.Path,
                         help="path to depth map of test image",
-                        required=True)
+                        default=None)
     parser.add_argument(
         "--depth_model",
         type=str,
         help=
         f"name of depth model used for creating depth map under models/, allowed = {models_list}",
         choices=models_list,
-        required=True)
+        default=None)
     parser.add_argument("--output_path",
                         type=pathlib.Path,
                         help="output path",
                         default=pathlib.Path("outputs"))
-    parser.add_argument("--intrinsic_matrix",
-                        type=pathlib.Path,
-                        help="Camera intrinsic matrix")
+    parser.add_argument(
+        "--save_filled_only",
+        type=bool,
+        help=
+        "whether to only save the filled image without saving raw rotation only images",
+        action=argparse.BooleanOptionalAction,
+        default=False)
+    parser.add_argument(
+        "--angle",
+        type=float,
+        help=
+        "angle in degree to rotate the image perspective clockwise around x-axis",
+        default=15.0)
+    parser.add_argument(
+        "--translation",
+        type=float,
+        help=
+        "linear translation of the camera, some translation is needed after rotation to keep image centered",
+        default=-0.3)
+    parser.add_argument(
+        "--frames",
+        type=int,
+        help=
+        "number of frames to rotate, 0 if only one frame is needed. As a result 0 and 1 has the same effect",
+        default=0)
+    parser.add_argument(
+        "--scale_ratio",
+        type=float,
+        help="scaling ratio of the depth map during normalization",
+        default=51)
     parser.add_argument(
         "-d",
         "--debug",
@@ -56,7 +83,7 @@ def parse_args():
         dest="log_level",
         const=logging.DEBUG,
         default=logging.INFO)
-    return parser.parse_args()
+    return parser
 
 
 def normalize_depth_map(depth_map, scale_ratio: float):
@@ -160,32 +187,31 @@ def fill(image):
     return filled_new_image.astype(np.uint8)
 
 
-def run_augmented_perspective(
-    argv,
-    save_filled_only=False,
-    angle=15,
-    translation=-0.3,
-    frames=0,
-    scale_ratio=51,
-):
+def run_augmented_perspective(argv):
     """
     Run augmented perspective algorithm to change perspective of the input image
 
     :param argv: input command line arguments array free sys.argv
-    :param save_filled_only: whether to only save the filled image without saving raw rotation only images
-    :param angle: angles in degree to rotate the image perspective
-    :param translation: linear translation of the camera
-    :param frames: number of frames to rotate, 0 if only one frame is needed. As a result 0 and 1 has the same effect
-    :param scale_ratio: scaling ratio of the image
     :return: None, save image to disk
     """
     sys.argv = argv
-    args = parse_args()
+    parser = get_argument_parser()
+    args = parser.parse_args()
+    if not args.image_path:
+        parser.error("--image_path is required")
+        return
+    if not args.depth_map_path:
+        parser.error("--depth_map_path is required")
+        return
+    if not args.depth_model:
+        parser.error("--depth_model is required")
+        return
 
     logging.basicConfig(
-        format='%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s',
+        format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
         level=args.log_level,
-        datefmt='%Y-%m-%d %H:%M:%S')
+        datefmt="%Y-%m-%d %H:%M:%S",
+        force=True)
 
     image_name = args.image_path.stem
     output_name = f"{image_name}_{args.depth_model}"
@@ -202,13 +228,16 @@ def run_augmented_perspective(
         f"models.{args.depth_model}.depth_prediction")
     depth_model = depth_model_module.DepthModel
     if depth_model.require_normalization():
-        logging.info("normalizing with scale_ratio={}".format(scale_ratio))
-        depth_map = normalize_depth_map(depth_map, scale_ratio)
+        logging.info("normalizing with scale_ratio={}".format(
+            args.scale_ratio))
+        depth_map = normalize_depth_map(depth_map, args.scale_ratio)
 
     logging.info(f"Getting intrinsic matrix for {args.image_path}")
     try:
         intrinsic_matrix_path = datasets.get_intrinsic_matrix(args.image_path)
-        logging.info(f"Found intrinsic matrix file {intrinsic_matrix_path}")
+        logging.info(
+            f"Found intrinsic matrix file {intrinsic_matrix_path.relative_to(pathlib.Path.cwd())}"
+        )
         M = np.loadtxt(str(intrinsic_matrix_path))
         M = M.reshape((3, 4))
     except Exception as e:
@@ -217,18 +246,18 @@ def run_augmented_perspective(
         logging.info(traceback.format_exc())
         M = calibrate(depth_map)
 
-    if not frames:
-        angles = [angle]
-        translations = [translation]
+    if not args.frames:
+        angles = [args.angle]
+        translations = [args.translation]
     else:
-        angles = np.linspace(0, angle, frames)
-        translations = np.linspace(0, translation, frames)
+        angles = np.linspace(0, args.angle, args.frames)
+        translations = np.linspace(0, args.translation, args.frames)
 
     logging.info(f"Start re-projection for angles: {angles}")
     durations = []
     for i in range(len(angles)):
         logging.info(
-            f"Start re-projection at {angles[i]} degree clockwise around b axis"
+            f"[{i+1}/{len(angles)}] Start reprojection at {angles[i]} degree clockwise around b axis"
         )
         start_time = time.time()
 
@@ -253,24 +282,32 @@ def run_augmented_perspective(
         RT = np.zeros((4, 4), dtype=np.float64)
         RT[0:3, 0:3] = R
         RT[:, 3] = T
-        logging.info(f"RT: {RT}\n")
+        logging.info(f"RT:\n{RT}")
 
+        # reprojection
         new_image = reprojection(image, depth_map, M, RT)
-        filled_new_image = fill(new_image)
 
-        suffix = "" if not frames else f"_{i}"
-        reprojected_image_path = args.output_path, pathlib.Path(
-            f"{output_name}_reprojected{suffix}.png")
-        reprojected_filled_image_path = args.output_path / pathlib.Path(
-            f"{output_name}_reprojected_filled{suffix}.png")
-        if not save_filled_only:
+        # save raw image with black blocks
+        suffix = "" if not args.frames else f"_{i}"
+        if not args.save_filled_only:
+            reprojected_image_path = args.output_path / pathlib.Path(
+                f"{output_name}_reprojected{suffix}.png")
             logging.info(
                 f"Saving image {new_image.shape} to {reprojected_image_path}")
             io.imsave(str(reprojected_image_path), new_image)
+        else:
+            logging.info("Skip saving unfilled raw reprojections")
+
+        # save filled image with full pixels
+        filled_new_image = fill(new_image)
+        reprojected_filled_image_path = args.output_path / pathlib.Path(
+            f"{output_name}_reprojected_filled{suffix}.png")
         logging.info(
             f"Saving filled image {filled_new_image.shape} to {reprojected_filled_image_path}"
         )
         io.imsave(str(reprojected_filled_image_path), filled_new_image)
+
+        # statistics
         duration = time.time() - start_time
         logging.info(f"Time taken: {duration} seconds")
         durations.append(duration)
