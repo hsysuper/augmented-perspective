@@ -29,18 +29,18 @@ def get_argument_parser():
     parser.add_argument("--image_path",
                         type=pathlib.Path,
                         help="path to a test image",
-                        required=True)
+                        default=None)
     parser.add_argument("--depth_map_path",
                         type=pathlib.Path,
                         help="path to depth map of test image",
-                        required=True)
+                        default=None)
     parser.add_argument(
         "--depth_model",
         type=str,
         help=
         f"name of depth model used for creating depth map under models/, allowed = {models_list}",
         choices=models_list,
-        required=True)
+        default=None)
     parser.add_argument("--output_path",
                         type=pathlib.Path,
                         help="output path",
@@ -197,6 +197,15 @@ def run_augmented_perspective(argv):
     sys.argv = argv
     parser = get_argument_parser()
     args = parser.parse_args()
+    if not args.image_path:
+        parser.error("--image_path is required")
+        return
+    if not args.depth_map_path:
+        parser.error("--depth_map_path is required")
+        return
+    if not args.depth_model:
+        parser.error("--depth_model is required")
+        return
 
     logging.basicConfig(
         format="%(asctime)s.%(msecs)03d %(levelname)-8s %(message)s",
@@ -226,7 +235,9 @@ def run_augmented_perspective(argv):
     logging.info(f"Getting intrinsic matrix for {args.image_path}")
     try:
         intrinsic_matrix_path = datasets.get_intrinsic_matrix(args.image_path)
-        logging.info(f"Found intrinsic matrix file {intrinsic_matrix_path}")
+        logging.info(
+            f"Found intrinsic matrix file {intrinsic_matrix_path.relative_to(pathlib.Path.cwd())}"
+        )
         M = np.loadtxt(str(intrinsic_matrix_path))
         M = M.reshape((3, 4))
     except Exception as e:
